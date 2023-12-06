@@ -1,0 +1,52 @@
+# See http://matplotlib.org/users/customizing.html#a-sample-matplotlibrc-file for option examples
+
+font.family: sans-serif
+font.style: normal
+font.sans-serif: CMU Bright, Helvetica, Arial, Liberation Sans, DejaVu Sans
+font.serif: Computer Modern Roman, DejaVu Serif, serif
+font.size: 11
+  # Relative font size are based on font.size. They are
+  # xx-small, x-small, small, medium, large, x-large, xx-large, larger, smaller
+
+# dark-text options
+text.color: 333333
+
+# Transparent backgrounds
+axes.facecolor : FFFFFF00
+savefig.facecolor : FFFFFF00
+patch.facecolor: FFFFFF00
+
+#mathtext.fontset : cm
+axes.titlepad : 14.0
+axes.spines.left : True
+axes.spines.bottom : True
+axes.spines.top : False
+axes.spines.right : False
+axes.titlesize : medium
+axes.titleweight : bold
+legend.framealpha : 0
+legend.labelspacing: 0.2   # Default: 0.5
+legend.handlelength: 1.4   # In font-size units; default: 2.0
+legend.handletextpad: 0.5  # In font-size units; default: 0.8
+legend.borderaxespad: 0.5  # Default: 0.5
+legend.borderpad: 0.4      # Default: 0.4
+legend.edgecolor: FFFFFF00  # Remove legend border
+
+lines.markersize: 4
+
+figure.figsize : 4.5, 2.78  # Golden ratio
+figure.dpi : 120  # Display figures larger in notebook; default is 72 when pyplot is imported
+
+savefig.dpi : 300
+#savefig.format : png
+    # NOTE: Changing to anything else than png will prevent the display of
+    # Holoviews.HoloMap. (Probably due to a bug on Holoviews’ end)
+savefig.bbox : standard
+    # Don't use 'tight': impossible to set figure size exactly (just crops pad)
+    # Use `fig.subplots_adjust()` instead; unfortunately I haven't found a way
+    # to find proper values for `left`, etc. other than repeatedly exporting
+    # the figure with different values.
+    # https://stackoverflow.com/q/16032389
+
+savefig.pad_inches : 0
+savefig.transparent : True

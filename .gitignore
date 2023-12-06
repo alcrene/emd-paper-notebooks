@@ -1,0 +1,12 @@
+__pycache__
+.ipynb_checkpoints
+.joblib-cache
+.jupyter
+.smt
+
+data
+figures
+simresults
+
+*.ipynb
+*.json
