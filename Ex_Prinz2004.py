@@ -1588,10 +1588,10 @@ def panel_calib_curve(task, c_list: list[float]) -> hv.Overlay:
     return curve_panel
 
 
-# %% editable=true slideshow={"slide_type": ""}
-task = calib_tasks_to_show[0]
-hv.output(calib_hist(calib_tasks_to_show[0]).hmap,
-          backend="bokeh", widget_location="right")
+# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
+# task = calib_tasks_to_show[0]
+# hv.output(calib_hist(calib_tasks_to_show[0]).hmap,
+#           backend="bokeh", widget_location="right")
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # :::{admonition} Hint: Diagnosing $\Bemd{}$ and $\Bconf{}$ histograms
@@ -1623,6 +1623,9 @@ hv.output(calib_hist(calib_tasks_to_show[0]).hmap,
 # histpanel_emd = panel_calib_hist(task, c_list).opts(show_legend=False)
 # curve_panel = panel_calib_curve(task, c_list)
 # fig = curve_panel << hv.Empty() << histpanel_emd
+#
+# calib_results = task.unpack_results(task.run())
+# calib_plot = emd.viz.calibration_plot(calib_results)  # Used below
 #
 # fig.opts(backend="matplotlib", fig_inches=5)
 
@@ -1676,7 +1679,7 @@ hv.output(calib_hist(calib_tasks_to_show[0]).hmap,
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # #### Diagnostics: Exploring calibration experiments
 
-# %%
+# %% editable=true slideshow={"slide_type": ""}
 iω_default = 21  # One of the experiments which gives unexpected results at large c
 
 
@@ -1756,8 +1759,7 @@ def get_color(a):
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "hide-input"]
 # @lru_cache(maxsize=4) # Because Experiment.dataset caches data, we keep this small
 # def get_ppfs(ω: Experiment):
-#     L = ω.L
-#     data = ω.get_data()
+#     data = ω.dataset.get_data()
 #     mixed_ppf = Dict({
 #         ω.a: emd.make_empirical_risk_ppf(ω.QA(data)),
 #         ω.b: emd.make_empirical_risk_ppf(ω.QB(data))
