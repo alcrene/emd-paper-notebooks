@@ -1,0 +1,4 @@
+div.margin, aside.margin {
+    background: var(--pst-color-on-background);
+    z-index: 5;
+}

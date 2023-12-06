@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:alcrene/colored-noise.git
+	branch = main
+	commit = 413343c1b89385c6125b922af6704bdb8bef170e
+	parent = 439a6e7f020c1678127fc6ed0a4e8b00960b51d2
+	method = merge
+	cmdver = 0.4.6
