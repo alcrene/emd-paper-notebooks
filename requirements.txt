@@ -1,0 +1,56 @@
+# These dependencies would normally be installed within the environment
+# with which you will run the notebooks; so for example
+# 
+#     python3 -m venv emd-paper
+#     source emd-paper/bin/activate
+#     pip install -r requirements.txt
+#
+# They were tested with Python 3.9 and 3.10
+
+# FIXME: Dependencies that need to be updated before publication
+#        (public URL & version)
+# - emdd
+# - valconfig
+# - mystmd
+
+numpy >= 1.21      # numpy.typing.NDArray
+scipy >= 1.7       # integrate.simpson changed name (used to be 'simps')
+matplotlib >= 3.6  # 3.4 adds supylabel. 3.6 allows to configure supylabel with rcparams
+seaborn
+pandas
+pydantic >= 1.8.2
+tqdm
+addict
+more-itertools
+joblib
+flufl.lock         # Used by prinz2004 to lock its initialization cache
+pint
+tabulate
+
+# EMDD library
+#emdd @ git+https://github.com/alcrene/emdd
+
+# For executing notebooks
+jupytext
+ipykernel
+ipywidgets  # Required for widgets like progress bars
+holoviews >= 1.15.3
+bokeh
+#jupyter_bokeh  # Install in environment containing Jupyter server
+# For bokeh export to png (also used by holoviews)
+selenium
+phantomjs
+pillow
+
+# Recording parameters and results
+#valconfig
+smttask @ git+https://github.com/alcrene/smttask
+scityping > 0.6.3
+#scityping @ git+https://github.com/alcrene/scityping
+parameters @ git+https://github.com/alcrene/parameters
+sumatra[git] @ git+https://github.com/alcrene/sumatra
+mackelab-toolbox @ git+https://github.com/mackelab/mackelab-toolbox
+pyloric-simulator @ git+https://github.com/alcrene/pyloric-network-simulator
+
+# # JAX-accelerated sampling (not currently used because of a lack of JIT-able root finder)
+# jax[cpu]
