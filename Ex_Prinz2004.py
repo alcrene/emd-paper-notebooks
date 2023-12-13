@@ -168,9 +168,11 @@ class colors(ColorScheme):
     scale        : str = "#222222"
     #models = {model: color for model, color in zip("ABCD", config.figures.colors.bright.cycle)},
     AB           : str = "#b2b2b2"  # Equivalent to high-constrast.yellow in greyscale
+    AB_fill      : str = "#E4E4E4"  # Used as a fill color for node circle
     #LP_data      : str = config.figures.colors["high-contrast"].red
     #LP_candidate : str = config.figures.colors["high-contrast"].blue
     LP_data      : str = config.figures.colors["bright"].cyan
+    LP_data_fill : str = "#C3E4EF"
     LP_candidates: hv.Cycle = hv.Cycle(config.figures.colors["bright"].cycle)
     calib_curves: hv.Palette = hv.Palette("YlOrBr", range=(0.1, .65), reverse=True)
 
@@ -520,12 +522,81 @@ class Dataset:
         return self.data_model(L, rng=(rng or self.rng))
 
 
-# %% [raw] editable=true raw_mimetype="" slideshow={"slide_type": ""}
-# # REMOVE
-# data_model = utils.compose(digitize(), gaussian(0, 2), phys_models.true)
-
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ### Example traces
+
+# %% [markdown] editable=true slideshow={"slide_type": ""}
+# Because holoviews can’t produce a grid layout with merged cells, we plot the circuit and the traces separately.
+# The full figure is full width, which is why we use a width of `2*config.fig_inches`.
+#
+# **TODO**: Aspect of the whole plot should be 50% flatter. For the current version, this was done in Inkscape. Sublabels should also be reduced.
+
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
+# Set of sublabels, in case we need to copy paste them.
+
+# %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
+sublabels = hv.Layout([hv.Curve([(0,0), (1,a)]) for a in range(8)]).opts(
+ transpose=True,
+ sublabel_format="({alpha})",
+ fig_inches=2*config.figures.defaults.fig_inches/4  # 2*fig_inches for full width, /4 for four columns
+).opts(hv.opts.Curve(hooks=[viz.noaxis_hook])).cols(2)
+sublabels
+
+# %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
+viz.save(sublabels, config.paths.figures/"prinz_sublabels_raw.svg")
+
+# %% [markdown]
+# Circuit panel
+
+# %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
+import matplotlib.pyplot as plt
+class DrawCircuit:
+    def hvhook(self, xycolor, conn):
+        """Creates a hook which can be used in a Holoviews plot"""
+        def _hook(plot, element):
+            self.__call__(xycolor, conn, plot.handles["axis"])
+        return _hook
+    def __call__(self, xycolor, conn, ax=None):
+        r = 1  # node radius
+        for x,y,ec,fc in xycolor:
+            neuron = plt.Circle((x,y), r, edgecolor=ec, facecolor=fc)
+            ax.add_patch(neuron)
+        for i, j in conn:
+            xyi = xycolor[i][:2]
+            xyj = xycolor[j][:2]
+            x, y = xycolor[i][:2]
+            dx = xyj[0] - xyi[0]
+            dy = xyj[1] - xyi[1]
+            # Compute offsets so arrow starts/ends outside node circles
+            θ = np.arctan2(dy, dx)
+            ox = r*np.cos(θ)
+            oy = r*np.sin(θ)
+            ax.arrow(x+ox, y+oy, dx-2*(ox), dy-2*(oy),
+                     length_includes_head=True, head_width=.4*r, head_length=.4*r,
+                     edgecolor="black", facecolor="black")
+draw_circuit = DrawCircuit()
+
+# %% editable=true slideshow={"slide_type": ""}
+circuit = hv.Scatter([(0,0)]).opts(color="none").opts(hooks=[viz.noaxis_hook])
+circuit.opts(hooks=[draw_circuit.hvhook([(0,0, colors.AB, colors.AB_fill), (0,-3, colors.LP_data, colors.LP_data_fill)],
+                                        [(0, 1)]),
+                    viz.noaxis_hook
+                   ]
+            )
+
+circuit_panel = circuit * hv.Text(0,0, "AB") * hv.Text(0,-3, "LP")
+circuit_panel.opts(hv.opts.Text(weight="bold"))
+xlim=(-1.5, 1.5); ylim=(-5, 1.5)
+circuit_panel.opts(aspect=np.diff(xlim)/np.diff(ylim), xlim=xlim, ylim=ylim,
+                   fig_inches=2*config.figures.defaults.fig_inches/4)  # 2*fig_inches for full width, /4 for four columns
+circuit_panel
+
+# %%
+#viz.save(circuit_panel, config.paths.figures/"prinz_circuit_raw.pdf")
+viz.save(circuit_panel, config.paths.figures/"prinz_circuit_raw.svg")
+
+# %% [markdown]
+# Trace panels
 
 # %% editable=true slideshow={"slide_type": ""}
 LP_data = Dataset(("example trace", "data"), L_data, LP_model="LP 1",
@@ -537,21 +608,6 @@ LP_candidate_data = Dict(
     D = replace(LP_data, purpose=("example trace", "D"), LP_model="LP 5"),
 )
 
-
-# %% editable=true slideshow={"slide_type": ""} tags=["remove-output", "active-ipynb"]
-#     # REMOVE
-#     data_rng = utils.get_rng("prinz", "data")
-#     
-#     LP_data_trace = data_model(L, rng=data_rng)
-#     
-#     AB_trace = AB_model(LP_data_trace.index)
-#     
-#     LP_candidate_traces = utils.LazyDict(
-#         A = lambda: phys_models.A(LP_data_trace),
-#         B = lambda: phys_models.B(LP_data_trace),
-#         C = lambda: phys_models.C(LP_data_trace),
-#         D = lambda: phys_models.D(LP_data_trace),
-#     )
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
 # AB_trace = AB_model(LP_data.get_data().index)
@@ -596,15 +652,16 @@ LP_candidate_data = Dict(
 #     #hv.opts.Curve("Candidate.LP", color=colors.LP_candidates),
 #     hv.opts.Curve("Scale", color=colors.scale), hv.opts.Curve("Scale", linewidth=1.5, backend="matplotlib"),
 #     hv.opts.Text("Scale", color=colors.scale),
-#     hv.opts.Layout(transpose=True, sublabel_position=(-.3, 0.6), sublabel_size=10, sublabel_format="({alpha})"),
-#     hv.opts.Layout(fig_inches=config.figures.defaults.fig_inches/3,
+#     hv.opts.Layout(transpose=True, sublabel_position=(-.15, 0.6), sublabel_size=10, sublabel_format="({alpha})"),
+#     hv.opts.Layout(fig_inches=2*config.figures.defaults.fig_inches/4,
 #                    hspace=.2, vspace=0.1, backend="matplotlib")
 # ).cols(2)
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-cell"]
-# viz.save(layout, config.paths.figures/"prinz_example-traces.pdf")
-# viz.save(layout.opts(fig_inches=7.5/3, sublabel_position=(-.1, 0.6), backend="matplotlib", clone=True),
-#                  config.paths.figures/"prinz_example-traces.svg")
+# #viz.save(layout, config.paths.figures/"prinz_example-traces_raw.pdf")
+# viz.save(layout, config.paths.figures/"prinz_example-traces_raw.svg")
+# # viz.save(layout.opts(fig_inches=7.5/3, sublabel_position=(-.1, 0.6), backend="matplotlib", clone=True),
+# #                  config.paths.figures/"prinz_example-traces_raw.svg")
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Loss functions
@@ -1364,15 +1421,12 @@ class EpistemicDist(emd.tasks.EpistemicDist):
 N = 512
 Ωdct = {(f"{Ω.a} vs {Ω.b}", Ω.ξ_name, Ω.σo_dist, Ω.τ_dist, Ω.σi_dist): Ω
         for Ω in [
-            #EpistemicDist(N, "A", "B", "Gaussian", "low noise", "no Iext", "no Iext"),
-            #EpistemicDist(N, "A", "B", "Gaussian", "low noise", "short input correlations", "weak input"),
-            #EpistemicDist(N, "A", "B", "Gaussian", "low noise", "long input correlations", "weak input"),
+            EpistemicDist(N, "A", "D", "Gaussian", "low noise", "short input correlations", "weak input"),
             EpistemicDist(N, "C", "D", "Gaussian", "low noise", "short input correlations", "weak input"),
-            #EpistemicDist(N, "C", "D", "Gaussian", "low noise", "long input correlations", "weak input"),
-#            EpistemicDist(N, "A", "C", "Gaussian", "low noise", "short input correlations", "weak input"),
-            #EpistemicDist(N, "A", "B", "normal", "biased", "wide"),
-            #EpistemicDist(N, "A", "C", "normal", "unbiased", "wide"),
-            #EpistemicDist(N, "A", "C", "normal", "biased", "wide")
+            EpistemicDist(N, "A", "B", "Gaussian", "low noise", "short input correlations", "weak input"),
+            EpistemicDist(N, "A", "D", "Gaussian", "low noise", "short input correlations", "strong input"),
+            EpistemicDist(N, "C", "D", "Gaussian", "low noise", "short input correlations", "strong input"),
+            EpistemicDist(N, "A", "B", "Gaussian", "low noise", "short input correlations", "strong input"),
         ]
        }
 
@@ -1387,20 +1441,14 @@ tasks = {}
 for Ωkey, Ω in Ωdct.items():
     task = emd.tasks.Calibrate(
         reason = f"Prinz calibration – {Ω.a} vs {Ω.b} - {Ω.ξ_name} - {Ω.σo_dist} - {Ω.τ_dist} - {Ω.σi_dist} - {N=}",
-        #reason = f"Prinz calibration – Data model among candidates – A vs B - c=2⁻⁸ - {Ω.ξ_dist} - {Ω.μ_dist} - {Ω.σ_dist} - {N=}",
         #c_list = [.5, 1, 2],
         #c_list = [2**-8, 2**-7, 2**-6, 2**-5, 2**-4, 2**-3, 2**-2, 2**-1, 2**0],
         #c_list = [2**-8, 2**-6, 2**-4, 2**-2, 1],  # 60h runs
         #c_list = [2**0],
         #c_list = [2**-4, 2**0, 2**4],
         c_list = [2**-6, 2**-4, 2**-2, 2**0, 2**4],
-        # Collection of generative data model
+        # Collection of experiments (generative data model + candidate models)
         experiments = Ω.generate(N),
-        # # Theory models
-        # riskA           = Qrisk[Ω.a],
-        # riskB           = Qrisk[Ω.b],
-        # synth_risk_ppfA = synth_ppf[Ω.a],
-        # synth_risk_ppfB = synth_ppf[Ω.b],
         # Calibration parameters
         Ldata = L_data,
         #Linf = 12288  # 2¹³ + 2¹²
@@ -1417,7 +1465,7 @@ for Ωkey, Ω in Ωdct.items():
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "skip-execution"]
 #     for key, task in tasks.items():
-#         if True or not task.has_run:  # Don’t create task files for tasks which have already run
+#         if False or not task.has_run:  # Don’t create task files for tasks which have already run
 #             Ω = task.experiments
 #             taskfilename = f"prinz_calibration__{Ω.a}vs{Ω.b}_{Ω.ξ_name}_{Ω.σo_dist}_{Ω.τ_dist}_{Ω.σi_dist}_N={Ω.N}_c={task.c_list}"
 #             task.save(taskfilename)
@@ -1668,9 +1716,16 @@ def panel_calib_curve(task, c_list: list[float]) -> hv.Overlay:
 # print(tabulate(data, headers, tablefmt="simple_outline"))
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
-# viz.save(fig_calib, config.paths.figures/"prinz_calibrations.pdf")
-# viz.save(fig_calib.opts(fig_inches=5.5, backend="matplotlib", clone=True),
-#          config.paths.figures/"prinz_calibrations.svg")
+# fig_all_calibs = fig_calib + fig_calib + fig_calib + fig_calib + fig_calib + fig_calib
+# fig_all_calibs.opts(
+#     hv.opts.Layout(transpose=True,
+#                    fig_inches=2/3*2*config.figures.defaults.fig_inches)  # 2/3 of full width
+# ).cols(2)
+
+# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
+# viz.save(fig_all_calibs, config.paths.figures/"prinz_calibrations_raw.svg")
+# #viz.save(fig_calib.opts(fig_inches=5.5/3, backend="matplotlib", clone=True),
+# #         config.paths.figures/"prinz_calibrations_html_raw.svg")
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # Finalized with Inkscape:
@@ -1904,13 +1959,14 @@ def get_color(a):
 #     hv.opts.Distribution(facecolor=colors.LP_candidates, color="none", edgecolor="none", backend="matplotlib"),
 #     hv.opts.Curve(color=colors.LP_candidates),
 #     hv.opts.Curve(linestyle="solid", backend="matplotlib"),
-#     hv.opts.Overlay(fontscale=1.3, hooks=[viz.despine_hook], backend="matplotlib")
+#     hv.opts.Overlay(fontscale=1.3, hooks=[viz.despine_hook], backend="matplotlib",
+#                     fig_inches=1/3*2*config.figures.defaults.fig_inches)  # 1/3 full width
 # )
 
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-cell", "active-ipynb"]
-# viz.save(fig, config.paths.figures/f"prinz_Rdists.pdf")
-# viz.save(fig.opts(fig_inches=5.5, backend="matplotlib", clone=True),
-#               config.paths.figures/f"prinz_Rdists.svg")
+# viz.save(fig, config.paths.figures/f"prinz_Rdists_raw.svg")
+# #viz.save(fig.opts(fig_inches=5.5, backend="matplotlib", clone=True),
+# #              config.paths.figures/f"prinz_Rdists.svg")
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # EMD estimates for the probabilities $P(R_a < R_b)$ are best reported as a table:

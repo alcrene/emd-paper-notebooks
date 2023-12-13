@@ -166,12 +166,12 @@ data_B0      = 2.5e-6 * Bunits
 # Fitting parameters (used for the illustrative temperature fits)
 Nfits = 64
 
-
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
 #config.emd.mp.max_cores = 2
 
-# %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
-#viz.save.update_figure_files = False
+# %% editable=true slideshow={"slide_type": ""} tags=["remove-cell", "skip-execution"]
+viz.save.update_figure_files = False
+
 
 # %% [markdown]
 # ### Plotting
@@ -700,7 +700,8 @@ def plot_data(L, T=data_T, λmin=data_λ_min, λmax=data_λ_max, s=data_noise_s,
 # Tlist = [data_T]
 # λmin_list = [data_λ_min]
 # slist = [data_noise_s]
-# B0list = [0*Bunits]
+# #B0list = [0*Bunits]
+# B0list = [data_B0]
 # # Uncomment the lines below to check the bounds of the calibration distribution
 # # Uncomment also the line at the bottom of this cell
 # # Tlist = [1000, 3000, 5000]*K
@@ -771,7 +772,7 @@ def plot_data(L, T=data_T, λmin=data_λ_min, λmax=data_λ_max, s=data_noise_s,
 # def f(log2σ_log2T, phys_model, data):
 #     return Q(phys_model, *(2**log2σ_log2T))(data).mean()
 # def fit(phys_model, data_model, L, rng):
-#     res = optimize.minimize(f, [16., 12.], (phys_model, data_model(L, rng=rng)))
+#     res = optimize.minimize(f, [-16., 12.], (phys_model, data_model(L, rng=rng)))
 #     assert res.success
 #     return 2**res.x
 # def do_fits(phys_model, data_model, L):
@@ -859,7 +860,7 @@ synth_ppf = Dict({
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # The EMD criterion works by comparing a *synthetic PPF* with a *mixed PPF*. The mixed PPF is obtained with the same risk function but evaluated on the actual data.
 # - If the theoretical models are good, differences between synthetic and mixed PPFs can be quite small. They may only be visible by zooming the plot. This is fine – in fact, models which are very close to each other are easier to calibrate, since it is easier to generate datasets for which either model is an equally good fit.
-# - Note that the mixed PPF curves are above the synthetic ones. Although there are counter-examples (e.g. if a model overestimates the variance of the noise), this is generally expected, especially if models are fitted by minimizing the expected risk.
+# - Note that the mixed PPF curves are below the synthetic ones at low. Although there are counter-examples (e.g. if a model overestimates the variance of the noise), this is generally expected, especially if models are fitted by minimizing the expected risk.
 
 # %% editable=true raw_mimetype="" slideshow={"slide_type": ""}
 mixed_ppf = Dict({
@@ -1792,8 +1793,10 @@ def panel_param_iterator(L=L_small, purpose="data", progbar=True):
 # glue("uv_c_chosen", f"${viz.format_pow2(c_chosen, 'latex')}$")
 #
 # glue("data_T", **viz.formatted_quantity(data_T, 0))
-# glue("data_noise_s", data_noise_s)
-# glue("data_B0", data_B0)
+# glue("data_noise_s", data_noise_s.m, raw_html=viz.format_pow10(data_noise_s.m, 'latex'), # latex b/c used inside $…$ expression
+#                                     raw_latex=viz.format_pow10(data_noise_s.m, 'latex'))
+# glue("data_B0", data_B0.m, raw_html=viz.format_scientific(data_B0.m, 2, format='latex'),
+#                           raw_latex=viz.format_scientific(data_B0.m, 2, format='latex'))
 # glue("Bunits", f"{Bunits:~P}", raw_latex=f"{Bunits:~Lx}",
 #      raw_myst=viz.tex_frac_to_solidus(f"{Bunits:~L}"))
 #     # {:~L} uses \frac{}{}, but we want to use Bunits in a denom, so we replace with {}/{}
@@ -1801,10 +1804,14 @@ def panel_param_iterator(L=L_small, purpose="data", progbar=True):
 # glue("sunits", f"{sunits:~P}", raw_latex=f"{sunits:~Lx}",
 #      raw_myst=viz.tex_frac_to_solidus(f"{sunits:~L}"))
 #
-# glue("L_small", L_small)
-# glue("L_med", L_med)
-# glue("L_large", L_large)
+# glue("L_small", L_small, raw_html=viz.format_pow2(L_small, 'latex'), # latex b/c used inside $…$ expression
+#                         raw_latex=viz.format_pow2(L_small, 'latex'))
+# glue("L_med", L_med, raw_html=viz.format_pow2(L_med, 'latex'),
+#                     raw_latex=viz.format_pow2(L_med, 'latex'))
+# glue("L_large", L_large, raw_html=viz.format_pow2(L_large, 'latex'),
+#                         raw_latex=viz.format_pow2(L_large, 'latex'))
 #
+# glue("Nfits", Nfits)
 # r = fit_stats[("Rayleigh-Jeans", L_small, "T")]
 # glue("T-fit_Rayleigh-Jeans_L-small", **viz.formatted_quantity(r["mean"]*K, r["std"]*K, 0))
 # r = fit_stats[("Rayleigh-Jeans", L_large, "T")]

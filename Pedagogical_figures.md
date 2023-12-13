@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.15.0
 kernelspec:
   display_name: Python (emd-paper)
   language: python
@@ -29,7 +29,7 @@ import numpy as np
 import holoviews as hv
 from dataclasses import dataclass
 from more_itertools import nth
-from myst_nb import glue
+#from myst_nb import glue
 ```
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
@@ -45,6 +45,7 @@ slideshow:
 import utils
 import viz
 from config import config
+from viz import glue
 ```
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
@@ -116,6 +117,16 @@ phys_model = "Planck"
 editable: true
 slideshow:
   slide_type: ''
+---
+c=Ex_UV.c_chosen
+#c = .25
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
 tags: [hide-input]
 ---
 Φarr = np.linspace(0, 1, 192*8)  # *8 is to resolve the curve in the [0.97, 1] zoom
@@ -129,7 +140,7 @@ mixed_curve = hv.Curve(zip(Φarr, mixed_ppf(Φarr)),
                        kdims=[dims.Φ], vdims=[dims.q], label="mixed PPF")
 synth_curve = hv.Curve(zip(Φarr, synth_ppf(Φarr)),
                        kdims=[dims.Φ], vdims=[dims.q], label="synth PPF")
-area = hv.Area((Φarr, mixed_ppf(Φarr) - δemd(Φarr), mixed_ppf(Φarr) + δemd(Φarr)),
+area = hv.Area((Φarr, mixed_ppf(Φarr) - c*δemd(Φarr), mixed_ppf(Φarr) + c*δemd(Φarr)),
                kdims=[dims.Φ], vdims=[dims.q, "q2"], label="δemd")
 
 fig_onlycurves = area * mixed_curve * synth_curve
@@ -167,8 +178,6 @@ editable: true
 slideshow:
   slide_type: ''
 ---
-c=Ex_UV.c_chosen
-#c = .25
 rng = utils.get_rng("pedag", "qpaths")
 qpaths = emd.path_sampling.generate_quantile_paths(mixed_ppf, δemd, c=c, M=6, res=10, rng=rng)
 qhat_curves = [hv.Curve(zip(Φhat, qhat), label="sampled PPF",
@@ -204,6 +213,11 @@ slideshow:
   slide_type: ''
 tags: [remove-output, hide-input]
 ---
+# Remove text descriptions for the published plot
+fig = fig_with_qpaths
+fig_with_qpaths = fig.redim(Φ=hv.Dimension('Φ', label='$Φ$', range=fig.get_dimension("Φ").range),
+                            q=hv.Dimension('q', label='$q$', range=fig.get_dimension("q").range))
+
 # Zoom near 0
 ticks = dict(yticks=[-6.9, -6.8, -6.7, -6.6, -6.5], xticks=[0, 0.175, 0.35, 0.525, 0.7],
              yformatter = lambda y: str(y) if y in {-6.9, -6.5} else "",
@@ -233,6 +247,7 @@ zoom_rects = hv.Rectangles([get_rect_points(zoom_initial), get_rect_points(zoom_
 panelA = fig_with_qpaths.redim.range(Φ=(-0.025,1.025))*zoom_rects
 panelA.opts(legend_opts={"loc": "upper left", "bbox_to_anchor":(0.05, 0.85)})
 layout = panelA + zoom_initial + zoom_final
+# Set plot options
 layout.opts(shared_axes=False, sublabel_format="({alpha})", sublabel_position=(0.4, 0.85))
 layout.opts(shared_axes=False, backend="bokeh")
 layout.opts(hv.opts.Layout(fontscale=1.3),
@@ -369,11 +384,12 @@ editable: true
 slideshow:
   slide_type: ''
 ---
-glue("color_mixed", color_labels.mixed)
-glue("color_synth", color_labels.synth)
-glue("color_deltaemd", color_labels.δemd)
-glue("color_qhat", color_labels.qhat)
-glue("color_data", color_labels.data)
+glue("color_mixed", color_labels.mixed, raw_myst=True, raw_latex=True)
+glue("color_synth", color_labels.synth, raw_myst=True, raw_latex=True)
+glue("color_deltaemd", color_labels.δemd, raw_myst=True, raw_latex=True)
+glue("color_qhat", color_labels.qhat, raw_myst=True, raw_latex=True)
+glue("color_data", color_labels.data, raw_myst=True, raw_latex=True)
+glue("pedag_paths_c", c, raw_myst=True, raw_latex=True)
 ```
 
 ```{code-cell} ipython3

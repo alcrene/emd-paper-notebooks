@@ -669,22 +669,25 @@ tags: [remove-cell]
 ---
 label = "tbl_uv_criteria-comparison"
 short_caption = "Comparison of different model selection criteria."
+# '@' is a hack to prevent our own preprocessors from substituting \cref with {numref}
 caption = r"""
-\textbf{Comparison of different model selection criteria} for variations of the dataset show in
-\cref{fig_UV_setup}. Criteria compare the Planck ($\mathrm{P}$) model against the 
+\textbf{Comparison of different model selection criteria} for variations of the dataset shown in
+\@cref{fig_UV_setup}. Criteria compare the Planck ($\mathrm{P}$) model against the 
 Rayleigh-Jeans ($\mathrm{RJ}$) model and are evaluated for different dataset sizes
-($L$) and different levels of noise ($s$); $L$ and $s$ values were chosen to span the
+($L$), different levels of noise ($s$) and different wavelength windows ($λ$); $L$, $s$ and $λ$ values were chosen to span the
 transition from weak/ambiguous evidence for either $\mathrm{P}$ or $\mathrm{RJ}$,
 to reasonably strong evidence for $\mathrm{P}$.
-As in \cref{fig_uv-example_r-distributions}, we perform calculations under both positive
+The 15 to 30 $\mathrm{nm}$ window for $λ$ corresponds to the data that shown in \@cref{fig_UV_setup},
+while the 20 to 4000 $\mathrm{nm}$ window stretches further into the microwave range, where the two models are nearly indistinguishable.
+As in \@cref{fig_uv-example_r-distributions}, we perform calculations under both positive
 and null bias conditions (resp.\ ($\mathcal{B}_0 > 0$ and $\mathcal{B}_0 = 0$);
 the former emulates a situation where neither model can fit the data perfectly.
 To allow for comparisons, all criteria are presented as $\log_{10}$ ratios of probabilities,
 even though for non-Bayesian criteria this is not the usual form.
 Positive (negative) values indicate evidence in favour of the Planck (Rayleigh-Jeans) model.
-Expressions for all criterian are given in \cref{app_expressions-other-criteria}.
+Expressions for all criterian are given in \@cref{app_expressions-other-criteria}.
 Note that especially for small $L$, some values are sensitive to the random seed used to generate the data.
-"""
+""".replace("@", "")
 ```
 
 ```{code-cell} ipython3
@@ -783,7 +786,7 @@ with open(config.paths.figures/"table_criterion_comparison.latex", 'w') as f:
     f.write("```")
 ```
 
-+++ {"editable": true, "slideshow": {"slide_type": ""}}
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
 ## Exported notebook variables
 

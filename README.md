@@ -15,7 +15,7 @@ Notebooks are stored in a plain text format using [jupytext](https://jupytext.re
   This is not required however: using normal directories also works.
 
   - _data_
-    + If you want to reproduce the results from the paper, you may download are results directory from here: (TODO: UPLOAD AND ADD LINK). In particular this will allow you to skip the calibration computations (which can take days on a simple machine), if you leave the parameters unchanged.
+    + If you want to reproduce the results from the paper, you may download are results directory from here: (TODO: UPLOAD AND ADD LINK). In particular this will allow you to skip the calibration computations (which can take days on a simple machine), if you leave the task parameters unchanged.
 
   - _figures_
     + If you are also using the [paper repo](https://github.com/alcrene/emd-paper) to rebuild our paper, the produced figures must be in this location:
