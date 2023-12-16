@@ -47,7 +47,7 @@ phantomjs = "*"
 pillow = "*"
 
 # Recording parameters and results
-smttask = "*"
+smttask = ">=0.2.0-rc3"
 scityping = ">0.6.3"
 texsoup = "^0.3.1"
 
