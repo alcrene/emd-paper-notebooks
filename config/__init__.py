@@ -4,8 +4,6 @@ from typing import ClassVar, Optional
 from pathlib import Path
 from pydantic import validator
 from holoviews import Palette
-# from mackelab_toolbox.config import ValidatingConfig, prepend_rootdir, ensure_dir_exists
-# from mackelab_toolbox.config.holoviews import FiguresConfig
 from valconfig import ValConfig, ensure_dir_exists
 from valconfig.contrib.holoviews import FiguresConfig
 from scityping import Config as ScitypingConfig

@@ -255,7 +255,6 @@ data_obs_σ       = 2     * mV
 
 ```{code-cell} ipython3
 import matplotlib as mpl  # We currently use `mpl.rc_context` as workaround in a few places
-from mackelab_toolbox.viz import ColorScheme
 ```
 
 ```{code-cell} ipython3
@@ -265,7 +264,7 @@ slideshow:
   slide_type: ''
 ---
 @dataclass
-class colors(ColorScheme):
+class colors(viz.ColorScheme):
     #curve = hv.Cycle("Dark2").values,
     scale        : str = "#222222"
     #models = {model: color for model, color in zip("ABCD", config.figures.colors.bright.cycle)},

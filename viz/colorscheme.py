@@ -99,10 +99,9 @@ class ColorScheme(metaclass=ColorSchemeMeta):
     Jupyter notebook::
     
     >>> from dataclasses import dataclass
-    >>> from mackelab_toolbox.colors import ColorScheme
     >>>
     >>> @dataclass
-        class colors(ColorScheme):
+        class colors(viz.ColorScheme):
             data  : hv.Cycle = ["#4c72b0", "#dd8452", "#55a868"]
             accent: str      = "#c44e52"
             
