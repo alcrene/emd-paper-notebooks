@@ -1,0 +1,63 @@
+[tool.poetry]
+name = "emd-paper"
+version = "0.1.0"
+description = "Code for the EMD falsification paper"
+authors = ["Alexandre René <rene@cs.rwth-aachen.de>"]
+license = "MPL-2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+# Dependencies which need to be updated (public URL and/or fixed version)
+# - emd-falsify
+# - pyloric-simulator
+# - colored-noise
+
+python = "^3.9"
+
+emd-falsify = {git = "git@github.com:alcrene/emd-falsify.git"}
+pyloric-simulator = { git = "git@github.com:alcrene/pyloric-network-simulator.git" }
+#colored-noise = { git = "git@github.com:alcrene/colored-noise.git" }
+valconfig = ">=0.1.2-rc3"
+
+numpy = ">=1.21"      # numpy.typing.NDArray
+scipy = ">=1.7"       # integrate.simpson changed name (used to be 'simps')
+matplotlib = ">=3.6"  # 3.4 adds supylabel. 3.6 allows to configure supylabel with rcparams
+seaborn = "*"
+pandas = "*"
+pydantic = ">=1.8.2"
+tqdm = "*"
+addict = "*"
+more-itertools = "*"
+joblib = "*"
+"flufl.lock" = "*"         # Used by prinz2004 to lock its initialization cache
+pint = "*"
+tabulate = "*"
+
+# For executing notebooks
+jupytext = "*"
+ipykernel = "*"
+ipywidgets = "*"  # Required for widgets like progress bars
+holoviews = ">=1.15.3"
+bokeh = "*"
+myst-nb = "^1.0.0"
+#jupyter_bokeh  # Install in environment containing Jupyter server
+# For bokeh export to png (also used by holoviews)
+selenium = "*"
+phantomjs = "*"
+pillow = "*"
+
+# Recording parameters and results
+smttask = "*"
+scityping = ">0.6.3"
+texsoup = "^0.3.1"
+
+[[tool.poetry.source]]
+name = "TestPyPI"
+url = "https://test.pypi.org/simple/"
+priority = "supplemental"
+
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -1,4 +1,6 @@
-# Notebooks for the EMD paper
+# Code notebooks for the EMD falsification paper
+
+This repository contains the Jupyter notebooks used to create the figures for our paper describing model falsification using the EMD (empirical mean discrepancy).
 
 ## Format
 
@@ -24,28 +26,45 @@ Notebooks are stored in a plain text format using [jupytext](https://jupytext.re
 
       The easiest way to achieve this is to make _figures_ a symlink to that location, so notebooks automatically place figures in the right directory when they are run. Otherwise, it is also possible of course to run the notebooks and copy the figures directory to the right location afterwards.
 
-* Create a virtual environment for running the notebooks.
-  (Note: If you also cloned the paper repo, you can use the same environment for both.)
-  You can use your preferred method; two good options are:
+* Create a virtual environment and IPython kernel for running the notebooks.
+  The recommended and best tested procedure is to use [poetry](https://python-poetry.org/docs/#installation). This repo includes a `poetry.lock` file to make the execution environment fully reproducible.
+  However it is also possible to install within any virtual environment using the requirements file.
   
-      mamba create -n emd-paper
-      mamba activate emd-paper
+  - **poetry installation**
+  
+    + Install the dependencies:
+  
+          poetry install --no-root
+        
+    + Create an IPython kernel so the environment is accessible to Jupyter notebooks.
+      It is easiest to keep the kernel names unchanged, so the match the names saved within the notebooks
+      This is doubly recommended if you intend to rebuild the paper. (As otherwise each notebook would need to be opened and its kernel updated.)
+    
+          poetry shell
+          python -m ipykernel install --user --name emd-paper --display-name "Python (emd-paper)"        
+          deactivate
 
-  or
-
-      python3 -m venv /path/for/venvs/emd-paper
-      source /path/for/venvs/emd-paper/bin/activate
-
-  - Install the requirements
+  - **alternative installation**
+  
+    + Create a virtual environment, either with Python’s builtin `venv` 
     
-        pip install -r requirements.txt
+          python3 -m venv /path/for/venvs/emd-paper
+          source /path/for/venvs/emd-paper/bin/activate
     
-  - Add the virtual environment to the kernels available to jupyter.
     
-        python -m ipykernel install --user --name emd-paper --display-name "Python (emd-paper)"
+      or with mamba/conda:
     
-    We recommend using the same name (`emd-paper`) as above; this way the notebooks will already know which kernel (i.e. environment) to use when you open them. Otherwise you will need to select the correct kernel from the dropdown box.
-    This is doubly recommended if you intend to rebuild the paper. (As otherwise each notebook would need to be opened and its kernel updated.)
+          mamba create -n emd-paper
+          mamba activate emd-paper
+          
+    + Install the dependencies
+    
+          pip install -r requirements.txt
+          
+    + Create an IPython kernel so the environment is accessible to Jupyter notebooks.
+    
+          python -m ipykernel install --user --name emd-paper --display-name "Python (emd-paper)"        
+          deactivate  # or `mamba deactivate`
 
 * Initialize a [SumatraTask](https://sumatratask.readthedocs.io/) project:
 

@@ -29,6 +29,7 @@ tabulate
 
 # EMDD library
 #emdd @ git+https://github.com/alcrene/emdd
+pyloric-simulator @ git+https://github.com/alcrene/pyloric-network-simulator
 
 # For executing notebooks
 jupytext
@@ -36,6 +37,7 @@ ipykernel
 ipywidgets  # Required for widgets like progress bars
 holoviews >= 1.15.3
 bokeh
+myst-nb
 #jupyter_bokeh  # Install in environment containing Jupyter server
 # For bokeh export to png (also used by holoviews)
 selenium
@@ -44,13 +46,9 @@ pillow
 
 # Recording parameters and results
 #valconfig
-smttask @ git+https://github.com/alcrene/smttask
+smttask
 scityping > 0.6.3
-#scityping @ git+https://github.com/alcrene/scityping
-parameters @ git+https://github.com/alcrene/parameters
-sumatra[git] @ git+https://github.com/alcrene/sumatra
-mackelab-toolbox @ git+https://github.com/mackelab/mackelab-toolbox
-pyloric-simulator @ git+https://github.com/alcrene/pyloric-network-simulator
+texsoup
 
 # # JAX-accelerated sampling (not currently used because of a lack of JIT-able root finder)
 # jax[cpu]

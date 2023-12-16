@@ -1651,14 +1651,14 @@ hv.extension("matplotlib", "bokeh")
 editable: true
 slideshow:
   slide_type: ''
-tags: [remove-cell]
+tags: [remove-cell, active-ipynb]
 ---
 # Workaround to be able run notebook while a new calibration is running:
 # Use the last finished task
 from smttask.view import RecordStoreView
 rsview = RecordStoreView()
 rsview.list
-task = emd.tasks.Calibrate.from_desc(rsview.last.parameters)
+#task = emd.tasks.Calibrate.from_desc(rsview.last.parameters)
 #task = emd.tasks.Calibrate.from_desc(rsview.get('20231017-222339_1c9062').parameters)
 #params = rsview.get('20231024-000624_baf0b3').parameters
 params = rsview.get('20231029-161729_cf5215').parameters  # Latest run with UV as of 09.11
