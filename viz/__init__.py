@@ -58,6 +58,10 @@ def glue(name: str, variable, display: bool=True,
 
     .. Note:: The result of specifying both `raw_html` and `raw_myst` is undefined.
 
+    .. DEVNOTE:: In practice we ended up using `raw_latex` and `raw_myst` almost
+       exclusively, and setting them to the same value (to be used inside dollar signs).
+       So there is still room for improvement with regards to the `raw` options.
+
     """
     myst_nb.glue(name, variable, display)
     with shelve.open(str(config.paths.glue_shelf)) as db:

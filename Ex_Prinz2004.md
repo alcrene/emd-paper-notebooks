@@ -263,6 +263,18 @@ editable: true
 slideshow:
   slide_type: ''
 ---
+mpl.rcParams.update({
+    "text.usetex": True,
+    "font.family": "Helvetica"  # With the default font, the "strong"/"weak" labels have awful letter spacing.
+})
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+---
 @dataclass
 class colors(viz.ColorScheme):
     #curve = hv.Cycle("Dark2").values,
@@ -1746,23 +1758,36 @@ For an initial pilot run, we found $N=64$ or $N=128$ to be good numbers. These n
 A subsequent run with $N \in \{256, 512, 1024\}$ can then refine and smooth the curve.
 :::
 
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+    #N = 64
+    N = 512
+    Ωdct = {(f"{Ω.a} vs {Ω.b}", Ω.ξ_name, Ω.σo_dist, Ω.τ_dist, Ω.σi_dist): Ω
+            for Ω in [
+                EpistemicDist(N, "A", "D", "Gaussian", "low noise", "short input correlations", "weak input"),
+                EpistemicDist(N, "C", "D", "Gaussian", "low noise", "short input correlations", "weak input"),
+                EpistemicDist(N, "A", "B", "Gaussian", "low noise", "short input correlations", "weak input"),
+                EpistemicDist(N, "A", "D", "Gaussian", "low noise", "short input correlations", "strong input"),
+                EpistemicDist(N, "C", "D", "Gaussian", "low noise", "short input correlations", "strong input"),
+                EpistemicDist(N, "A", "B", "Gaussian", "low noise", "short input correlations", "strong input"),
+            ]
+           }
+
 ```{code-cell} ipython3
 ---
 editable: true
 slideshow:
   slide_type: ''
 ---
-#N = 64
 N = 512
 Ωdct = {(f"{Ω.a} vs {Ω.b}", Ω.ξ_name, Ω.σo_dist, Ω.τ_dist, Ω.σi_dist): Ω
-        for Ω in [
-            EpistemicDist(N, "A", "D", "Gaussian", "low noise", "short input correlations", "weak input"),
-            EpistemicDist(N, "C", "D", "Gaussian", "low noise", "short input correlations", "weak input"),
-            EpistemicDist(N, "A", "B", "Gaussian", "low noise", "short input correlations", "weak input"),
-            EpistemicDist(N, "A", "D", "Gaussian", "low noise", "short input correlations", "strong input"),
-            EpistemicDist(N, "C", "D", "Gaussian", "low noise", "short input correlations", "strong input"),
-            EpistemicDist(N, "A", "B", "Gaussian", "low noise", "short input correlations", "strong input"),
-        ]
+        for Ω in (EpistemicDist(N, a, b, ξ_name, σo_dist, τ_dist, σi_dist)
+                  for (a, b) in [("A", "B"), ("A", "D"), ("C", "D")]
+                  for ξ_name in ["Gaussian", "Cauchy"]
+                  for σo_dist in ["low noise", "high noise"]
+                  for τ_dist in ["short input correlations", "long input correlations"]
+                  for σi_dist in ["weak input", "strong input"]
+            )
        }
 ```
 
@@ -1863,9 +1888,9 @@ tags: [remove-cell, active-ipynb]
 editable: true
 slideshow:
   slide_type: ''
-tags: [active-ipynb]
+tags: [active-ipynb, remove-cell]
 ---
-task = tasks['C vs D', 'Gaussian', 'low noise', 'short input correlations', 'weak input']
+    task = tasks['C vs D', 'Gaussian', 'low noise', 'short input correlations', 'weak input']
 ```
 
 ```{code-cell} ipython3
@@ -1873,9 +1898,9 @@ task = tasks['C vs D', 'Gaussian', 'low noise', 'short input correlations', 'wea
 editable: true
 slideshow:
   slide_type: ''
-tags: [active-ipynb]
+tags: [active-ipynb, remove-cell]
 ---
-assert task.has_run, "Run the calibration from the command line environment, using `smttask run`. Executing it as part of a Jupyter Book build would take a **long** time."
+    assert all(task.has_run for task in tasks.values()), "Run the calibrations from the command line environment, using `smttask run`. Executing it as part of a Jupyter Book build would take a **long** time."
 ```
 
 ```{code-cell} ipython3
@@ -1883,9 +1908,9 @@ assert task.has_run, "Run the calibration from the command line environment, usi
 editable: true
 slideshow:
   slide_type: ''
-tags: [active-ipynb]
+tags: [active-ipynb, remove-cell]
 ---
-calib_results = task.unpack_results(task.run())
+    calib_results = task.unpack_results(task.run())
 ```
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
@@ -1901,22 +1926,6 @@ slideshow:
 ---
 c_chosen = 2**-2
 c_list = [2**-6, 2**-4, 2**-2, 2**0, 2**4]
-```
-
-```{code-cell} ipython3
----
-editable: true
-slideshow:
-  slide_type: ''
-tags: [active-ipynb]
----
-calib_tasks_to_show = [tasks[key] for key in [
-    ('C vs D', 'Gaussian', 'low noise', 'short input correlations', 'weak input'),
-     #('C vs D', 'Gaussian', 'low noise', 'long input correlations', 'weak input'),
-     #('C vs D', 'Gaussian', 'high noise', 'short input correlations', 'weak input'),
-     #('C vs D', 'Gaussian', 'high noise', 'long input correlations', 'weak input')
-]]
-assert all(task.has_run for task in calib_tasks_to_show), "Run the calibration tasks from the command line environment, using `smttask run`. Executing it as part of a Jupyter Book build would take a **long** time."
 ```
 
 ```{code-cell} ipython3
@@ -2058,8 +2067,9 @@ slideshow:
   slide_type: ''
 tags: [active-ipynb]
 ---
-task = calib_tasks_to_show[0]
-hv.output(calib_hist(calib_tasks_to_show[0]).hmap,
+task = tasks['C vs D', 'Gaussian', 'low noise', 'short input correlations', 'weak input']
+assert task.has_run
+hv.output(calib_hist(task).hmap,
           backend="bokeh", widget_location="right")
 ```
 
@@ -2096,7 +2106,7 @@ slideshow:
   slide_type: ''
 tags: [active-ipynb]
 ---
-task = calib_tasks_to_show[0]
+#task = calib_tasks_to_show[0]
 histpanel_emd = panel_calib_hist(task, c_list).opts(show_legend=False)
 curve_panel = panel_calib_curve(task, c_list)
 fig = curve_panel << hv.Empty() << histpanel_emd
@@ -2138,18 +2148,68 @@ Calibration curve with shortened domain
 editable: true
 slideshow:
   slide_type: ''
+tags: [active-ipynb, hide-input]
+---
+tasks_to_show = [tasks[key] for key in [
+    ('A vs B', 'Gaussian', 'low noise', 'short input correlations', 'weak input'),
+    ('A vs B', 'Gaussian', 'low noise', 'short input correlations', 'strong input'),
+    ('C vs D', 'Gaussian', 'low noise', 'short input correlations', 'weak input'),
+    ('C vs D', 'Gaussian', 'low noise', 'short input correlations', 'strong input'),
+    ('A vs D', 'Gaussian', 'low noise', 'short input correlations', 'weak input'),
+    ('A vs D', 'Gaussian', 'low noise', 'short input correlations', 'strong input'),
+]]
+assert all(task.has_run for task in tasks_to_show), "Run the calibration tasks from the command line environment, using `smttask run`. Executing it as part of a Jupyter Book build would take a **long** time."
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
 tags: [active-ipynb]
 ---
-fig_calib = hv.Layout([panel_calib_curve(task, c_list)
-                       for task in calib_tasks_to_show])
-hv.output(fig_calib)
+panels = [panel_calib_curve(task, c_list) for task in tasks_to_show]
+panels[0].opts(title=r"$\mathcal{{M}}_C$ vs $\mathcal{{M}}_D$")
+panels[2].opts(title=r"$\mathcal{{M}}_A$ vs $\mathcal{{M}}_B$")
+panels[4].opts(title=r"$\mathcal{{M}}_A$ vs $\mathcal{{M}}_D$")
+panels[0].opts(ylabel=r"weak $I_{\mathrm{ext}}$")
+panels[1].opts(ylabel=r"strong $I_{\mathrm{ext}}$")
+panels[0].opts(hv.opts.Overlay(legend_cols=5, legend_position="top_left",
+                               ))
+for i in (1, 2, 3, 4, 5):
+    panels[i].opts(hv.opts.Overlay(show_legend=False))
+for i in (0, 1, 2, 4, 5):
+    panels[i].opts(xlabel="")
+hooks = {i: [viz.despine_hook, viz.set_xticks_hook([0, 0.5, 1]), viz.set_yticks_hook([0, 0.5, 1])] for i in range(6)}
+for i in (0, 1):
+    hooks[i].extend([viz.set_yticklabels_hook(["$0$", "$0.5$", "$1$"])])
+for i in (1, 3, 5):
+    hooks[i].extend([viz.set_xticklabels_hook(["$0$", "$0.5$", "$1$"])])
+for i, hook_lst in hooks.items():
+    panels[i].opts(hooks=hook_lst)
+    # panels[i].opts(hooks=[viz.set_yticks_hook([0, 0.5, 1]), viz.set_yticklabels_hook(["$0$", "$0.5$", "$1$"]), viz.despine_hook])
+for i in (0, 2, 4):
+    panels[i].opts(xaxis="bare")
+for i in (2, 3, 4, 5):
+    panels[i].opts(yaxis="bare")
+# for i in (1, 3, 5):
+#     panels[i].opts(hooks=[viz.set_xticks_hook([0, 0.5, 1]), viz.set_xticklabels_hook(["$0$", "$0.5$", "$1$"]), viz.despine_hook])
+fig_calibs = hv.Layout(panels)
+fig_calibs.opts(
+    hv.opts.Layout(backend="matplotlib", sublabel_format="", #sublabel_format="({alpha})",
+                   transpose=True,
+                   fig_inches=1/4*2*config.figures.defaults.fig_inches,  # Each panel is 1/4 of full width
+                   hspace=-0.1
+                  )
+).cols(2)
+hv.output(fig_calibs)
 
 # Print panel descriptions
 from tabulate import tabulate
-headers = ["models", "input corr", "obs noise", "obs dist"]
+headers = ["models", "input corr", "input strength", "obs noise", "obs dist"]
 data = [(f"Panel ({lbl})",
-         f"{(Ω:=task.experiments).a} vs {Ω.b}", f"{Ω.τ_dist}", f"{Ω.σo_dist}", f"{Ω.ξ_name} noise")
-        for lbl, task in zip("abcdef", calib_tasks_to_show)]
+         f"{(Ω:=task.experiments).a} vs {Ω.b}", f"{Ω.τ_dist}", f"{Ω.σi_dist}", f"{Ω.σo_dist}", f"{Ω.ξ_name} noise")
+        for lbl, task in zip("abcdef", tasks_to_show)]
 print(tabulate(data, headers, tablefmt="simple_outline"))
 ```
 
@@ -2160,21 +2220,7 @@ slideshow:
   slide_type: ''
 tags: [active-ipynb]
 ---
-fig_all_calibs = fig_calib + fig_calib + fig_calib + fig_calib + fig_calib + fig_calib
-fig_all_calibs.opts(
-    hv.opts.Layout(transpose=True,
-                   fig_inches=2/3*2*config.figures.defaults.fig_inches)  # 2/3 of full width
-).cols(2)
-```
-
-```{code-cell} ipython3
----
-editable: true
-slideshow:
-  slide_type: ''
-tags: [active-ipynb]
----
-viz.save(fig_all_calibs, config.paths.figures/"prinz_calibrations_raw.svg")
+viz.save(fig_calibs, config.paths.figures/"prinz_calibrations_raw.svg")
 #viz.save(fig_calib.opts(fig_inches=5.5/3, backend="matplotlib", clone=True),
 #         config.paths.figures/"prinz_calibrations_html_raw.svg")
 ```
@@ -2183,6 +2229,8 @@ viz.save(fig_all_calibs, config.paths.figures/"prinz_calibrations_raw.svg")
 
 Finalized with Inkscape:
 - Put the curves corresponding to `c_chosen` on top. Highlight curve with white surround (2x curve width).
+- Move legend above plots
+- Add the model comparison distributions (below)
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
@@ -2434,19 +2482,21 @@ fig.opts(
 fig
 ```
 
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
 :::{admonition} Conclusion
 :class: important
 
 There is a upper bound on the value of $c$ we can choose: too large $c$ causes the quantile curves to constantly hit upon the monotonicity constraint, distorting the distribution.
 
-Hypothesis: The iterative nature of the hierarchical beta process may make this worse. A process based on a Dirichlet (rather than beta), where all increments are sampled at once, may mitigate this.
+Hypothesis: The iterative nature of the hierarchical beta process may make this worse. A process based on a Dirichlet (rather than beta) distribution, where all increments are sampled at once, may mitigate this.
 :::
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
 ## EMD model comparison
 
-Based on the calibration results, we choose the value $c=${glue:text}`c_chosen` (set above) to compute the $\Bemd{}$ criterion between models.
+Based on the calibration results, we choose the value $c=${glue:text}`c_chosen_prinz` (set above) to compute the $\Bemd{}$ criterion between models.
 
 First we recreate `synth_ppf` and `mixed_ppf` as we did above.
 
@@ -2514,7 +2564,9 @@ fig.opts(
     hv.opts.Curve(color=colors.LP_candidates),
     hv.opts.Curve(linestyle="solid", backend="matplotlib"),
     hv.opts.Overlay(fontscale=1.3, hooks=[viz.despine_hook], backend="matplotlib",
-                    fig_inches=1/3*2*config.figures.defaults.fig_inches)  # 1/3 full width
+                    legend_position="top", legend_cols=2,
+                    show_legend=True,
+                    fig_inches=1/4*2*config.figures.defaults.fig_inches)  # 1/4 full width
 )
 ```
 
@@ -2532,7 +2584,7 @@ viz.save(fig, config.paths.figures/f"prinz_Rdists_raw.svg")
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
-EMD estimates for the probabilities $P(R_a < R_b)$ are best reported as a table:
+EMD estimates for the probabilities $P(R_a < R_b)$ are nicely summarized in a table:
 
 ```{code-cell} ipython3
 ---
@@ -2614,6 +2666,10 @@ def compare_matrix(R_samples: Dict[str, ArrayLike]) -> pd.DataFrame:
 These can be inserted into other pages.
 
 ```{code-cell} ipython3
+raw_html=viz.format_pow2(c_chosen, format='unicode')
+```
+
+```{code-cell} ipython3
 ---
 editable: true
 slideshow:
@@ -2621,7 +2677,7 @@ slideshow:
 tags: [active-ipynb, remove-cell]
 ---
 glue("AB_model", AB_model_label, display=True)
-glue("c_chosen", f"$2^{{{np.log2(c_chosen).astype(int)}}}$", display=True)
+glue("c_chosen_prinz", c_chosen, raw_myst=viz.format_pow2(c_chosen, format='latex'), raw_latex=viz.format_pow2(c_chosen, format='latex'))
 
 glue("N", N, display=True)
 glue("Linf", viz.format_pow2(Linf), display=True)

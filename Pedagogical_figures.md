@@ -75,6 +75,16 @@ dims = viz.dims.matplotlib
 editable: true
 slideshow:
   slide_type: ''
+tags: [remove-cell]
+---
+viz.save.update_figure_files = True
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
 ---
 @dataclass
 class colors(viz.ColorScheme):
@@ -180,7 +190,7 @@ slideshow:
 ---
 rng = utils.get_rng("pedag", "qpaths")
 qpaths = emd.path_sampling.generate_quantile_paths(mixed_ppf, δemd, c=c, M=6, res=10, rng=rng)
-qhat_curves = [hv.Curve(zip(Φhat, qhat), label="sampled PPF",
+qhat_curves = [hv.Curve(zip(Φhat, qhat), label="PPF sample",
                         kdims=[dims.Φ], vdims=[dims.q])
                .opts(color=colors.lighten(rng.uniform(-0.2, +0.1)).qhat)
                .opts(color=colors.lighten(rng.uniform(-0.2, +0.1)).qhat, backend="bokeh")
@@ -255,16 +265,6 @@ layout.opts(hv.opts.Layout(fontscale=1.3),
             hv.opts.Area(fontscale=1.3),
             hv.opts.Rectangles(color="none", facecolor="none", edgecolor="#222222"),
             hv.opts.Rectangles(fill_color="none", line_color="#888888", backend="bokeh"))
-```
-
-```{code-cell} ipython3
----
-editable: true
-slideshow:
-  slide_type: ''
-tags: [remove-input, full-width]
----
-hv.output(layout.cols(3), backend="bokeh")
 ```
 
 ```{code-cell} ipython3

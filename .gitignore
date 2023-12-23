@@ -10,3 +10,4 @@ simresults
 
 *.ipynb
 *.json
+run.*
