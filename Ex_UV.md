@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.15.0
 kernelspec:
   display_name: Python (emd-paper)
   language: python
@@ -53,7 +53,7 @@ Skip to the cell containing
 from Ex_UV import *
 hv.extension("matplotlib", "bokeh")
 ```
-and start executing from there. It will run all the preceding cells, but since it skips the plots, it does this much faster.
+and start executing from there. This is much faster than running the entire notebook from the start, since although most of the preceding cells will still be executed, those producing plots will be skipped.
 :::
 
 ```{code-cell} ipython3
@@ -182,6 +182,7 @@ tags: [hide-input]
 ---
 ureg = pint.get_application_registry()
 ureg.default_format = "~P"
+if "photons" not in ureg: ureg.define("photons = count")
 Q_  = pint.Quantity
 K   = ureg.K
 μm  = ureg.μm
@@ -190,8 +191,10 @@ kW  = ureg.kW
 c   = ureg.c
 h   = ureg.planck_constant
 kB  = ureg.boltzmann_constant
+photons = ureg.photons
 
 Bunits = ureg.kW / ureg.steradian / ureg.m**2 / ureg.nm
+sunits = photons / Bunits
 ```
 
 ```{code-cell} ipython3
@@ -225,8 +228,8 @@ data_λ_min   = 15*μm
 #data_λ_min   = 20*μm
 data_λ_max   = 30*μm
 data_T       = 4000*K
-data_noise_s = 1e5 * Bunits**-1  # Determines variance of the Poisson noise
-                                 # (Inverse proportional to std dev)
+data_noise_s = 1e5 * sunits  # Determines variance of the Poisson noise
+                             # (Inverse proportional to std dev)
 data_B0      = 2.5e-6 * Bunits
 
 # Fitting parameters (used for the illustrative temperature fits)
@@ -599,8 +602,6 @@ However it only does so for the selected candidate models – if we omit to incl
 ```{code-cell} ipython3
 ---
 editable: true
-jupyter:
-  source_hidden: true
 slideshow:
   slide_type: ''
 tags: [active-ipynb, remove-cell]
@@ -897,9 +898,12 @@ panelB = hv.HoloMap({(T.m, λmin.m, s.m, B0.m): plot_data(L_large, T=T, λmin=λ
                     kdims=["T", "λmin", "s", "B₀"])
 
 fig = panelA + panelB
+xticks = [14, 16, 18, 20, 22, 24, 26, 28, 30]
 fig.opts(
-    hv.opts.Scatter(edgecolor="none", facecolors=colors.data, hooks=[viz.despine_hook], backend="matplotlib"),
-    hv.opts.Scatter(color=colors.data, backend="bokeh"),
+    hv.opts.Scatter(edgecolor="none", facecolors=colors.data,
+                    hooks=[viz.set_xticks_hook(xticks), viz.despine_hook],
+                    backend="matplotlib"),
+    hv.opts.Scatter(color=colors.data, xticks=xticks, backend="bokeh"),
     hv.opts.Curve(f"Candidate.{sanitize('Rayleigh-Jeans')}", color=colors.RJ, backend="matplotlib"),
     hv.opts.Curve(f"Candidate.{sanitize('Rayleigh-Jeans')}", color=colors.RJ, backend="bokeh"),
     hv.opts.Curve("Candidate.Planck", color=colors.Planck, linestyle="dashed", backend="matplotlib"),
@@ -917,10 +921,10 @@ panelA.opts(
 )
 
 #hv.output(fig.opts(legend_position="right", width=500, clone=True, backend="bokeh"), backend="bokeh")
-fig.cols(1);
+fig.cols(1)
 
 # Use this when checking calibration distribution
-panelA.opts(framewise=True)
+#panelA.opts(framewise=True)
 ```
 
 ```{code-cell} ipython3
@@ -943,8 +947,8 @@ tags: [active-ipynb, hide-input]
 # Rearrange figure for HTML output
 panelA.opts(hv.opts.Curve(hooks=[]))  # Make xaxis visible again
 panelB.opts(hv.opts.Curve(hooks=[viz.yaxis_off_hook]))  # Hide yaxis instead
-figrow = panelA * hv.Text(30, 0.00055, f"$s = {viz.format_pow10(data_noise_s, format='latex')}$\n$L = {viz.format_pow2(L_small, format='latex')}$", halign="right") \
-         + (panelB * hv.Text(30, 0.00055, f"$s = {viz.format_pow10(data_noise_s, format='latex')}$\n$L = {viz.format_pow2(L_large, format='latex')}$", halign="right")).opts(
+figrow = panelA * hv.Text(30, 0.00055, f"$s = {viz.format_pow10(data_noise_s, format='latex')}$\n\n$L = {viz.format_pow2(L_small, format='latex')}$", halign="right") \
+         + (panelB * hv.Text(30, 0.00055, f"$s = {viz.format_pow10(data_noise_s, format='latex')}$\n\n$L = {viz.format_pow2(L_large, format='latex')}$", halign="right")).opts(
              show_legend=False)
 figrow.opts(
     hv.opts.Layout(hspace=0.05, vspace=0.05, fontscale=1.3,
@@ -1056,7 +1060,7 @@ All this to say that in the vast majority of cases, we expect that the most conv
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
-In order to create a set of risk samples for each candidate model, we define for each a generative model which includes the expected noise (in this case additive Gaussian noise with parameter $σ$ fitted above). For each model, we then generate a **synthetic** dataset, evaluate the risk $q$ at every data point, and get a distribution for $q$. We represent this distribution by its quantile function, a.k.a. point probability function (PPF).
+In order to create a set of risk samples for each candidate model, we define for each a generative model which includes the expected noise (in this case additive Gaussian noise with parameter $σ$ fitted above). For each model, we then generate a **synthetic** dataset, evaluate the risk $q$ at every data point, and get a distribution for $q$. We represent this distribution by its quantile function, a.k.a. percent point function (PPF).
 
 :::{hint}
 :class: margin
@@ -1437,10 +1441,7 @@ class EpistemicDist(emd.tasks.EpistemicDist):
     def get_s(self, rng):
         p = rng.uniform(*self.s_p_range)
         return 2**p * Bunits**-1    # NB: Larger values => less noise
-        #return 2**p * data_noise_s   # NB: Larger values => less noise
-        #return np.exp(rng.uniform(9.5, 13.5)) * Bunits**-1
-    def get_B0(self, rng):
-        #return 0*Bunits
+    def get_B0(self, rng):          # NB: sunits would be better, but we did the original runs with Bunits, and changing to sunits would change the task hash
         return self.B0_std * rng.normal()
     def get_T(self, rng):
         return rng.uniform(*self.T_range.to(K).m) * K
@@ -1466,13 +1467,13 @@ class EpistemicDist(emd.tasks.EpistemicDist):
                 B0   = self.get_B0(rng),
                 phys_model = rng.choice(["Rayleigh-Jeans", "Planck"])
             )
-            # print(f"{np.log2(dataset.s.m):.2f}", f"{dataset.T.m:.0f}", f"{dataset.λmin:.2~P}", f"{dataset.λmax:.2~P}")  # DEBUG
             # Fit the candidate models to the data
             candidates = FittedCandidateModels(dataset)
             # Yield the data model, candidate models along with their loss functions
-            yield (dataset,
-                   candidates.Planck, candidates.RJ,
-                   candidates.QPlanck, candidates.QRJ)
+            yield emd.tasks.Experiment(
+                data_model=dataset,
+                candidateA=candidates.Planck, candidateB=candidates.RJ,
+                QA=candidates.QPlanck, QB=candidates.QRJ)
 ```
 
 +++ {"editable": true, "raw_mimetype": "", "slideshow": {"slide_type": ""}}
@@ -1493,10 +1494,7 @@ class EpistemicDist(emd.tasks.EpistemicDist):
     def get_s(self, rng):
         p = rng.uniform(*self.s_p_range)
         return 2**p * Bunits**-1    # NB: Larger values => less noise
-        #return 2**p * data_noise_s   # NB: Larger values => less noise
-        #return np.exp(rng.uniform(9.5, 13.5)) * Bunits**-1
-    def get_B0(self, rng):
-        #return 0*Bunits
+    def get_B0(self, rng):          # NB: sunits would be better, but we did the original runs with Bunits, and changing to sunits would change the task hash
         return self.B0_std * rng.normal()
     def get_T(self, rng):
         return rng.uniform(*self.T_range.to(K).m) * K
@@ -1541,19 +1539,6 @@ tags: [active-ipynb, remove-cell]
 from Ex_UV import EpistemicDist
 ```
 
-For backwards compatability until we rerun task
-
-```{raw-cell}
----
-editable: true
-raw_mimetype: ''
-slideshow:
-  slide_type: ''
-tags: [remove-cell, active-py]
----
-CalibrationDist = EpistemicDist
-```
-
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
 ### Execution
@@ -1569,6 +1554,12 @@ For an initial pilot run, we found $N=64$ or $N=128$ to be good numbers. These n
 A subsequent run with $N \in \{256, 512, 1024\}$ can then refine and smooth the curve.
 :::
 
++++
+
+:::{margin}
+`"microwave"` distribution is used to calibrate for the first row of the criteria comparison table.
+:::
+
 ```{code-cell} ipython3
 ---
 editable: true
@@ -1576,7 +1567,10 @@ slideshow:
   slide_type: ''
 ---
 N = 1024
-Ωdct = {"default": EpistemicDist()}
+Ωdct = {"infrared": EpistemicDist(),
+        "microwave": EpistemicDist(λmin_range   = (20, 1000) * μm,
+                                   λwidth_range = (1000, 3000) * μm)
+       }
 ```
 
 ```{code-cell} ipython3
@@ -1624,11 +1618,10 @@ The code below creates task files which can be executed from the command line wi
 editable: true
 slideshow:
   slide_type: ''
-tags: [active-ipynb, skip-execution]
 ---
     for key, task in tasks.items():
         if not task.has_run:  # Don’t create task files for tasks which have already run
-            Ω = task.models_Qs
+            Ω = task.experiments
             taskfilename = f"uv_calibration_{key}_N={Ω.N}_c={task.c_list}"
             task.save(taskfilename)
 ```
@@ -1646,21 +1639,19 @@ from Ex_UV import *
 hv.extension("matplotlib", "bokeh")
 ```
 
-+++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell", "active-ipynb"]}
++++ {"editable": true, "slideshow": {"slide_type": ""}}
 
-    # Workaround to be able run notebook while a new calibration is running:
-    # Use the last finished task
-    from smttask.view import RecordStoreView
-    rsview = RecordStoreView()
-    rsview.list
-    #task = emd.tasks.Calibrate.from_desc(rsview.last.parameters)
-    #task = emd.tasks.Calibrate.from_desc(rsview.get('20231017-222339_1c9062').parameters)
-    #params = rsview.get('20231024-000624_baf0b3').parameters
-    params = rsview.get('20231029-161729_cf5215').parameters  # Latest run with UV as of 09.11
-    if "models_Qs" in params.inputs:
-        params.inputs.experiments = params.inputs.models_Qs
-        del params.inputs["models_Qs"]
-    task = emd.tasks.Calibrate.from_desc(params)
+:::{dropdown} Workaround to be able run notebook while a new calibration is running
+```python
+# Use the last finished task
+from smttask.view import RecordStoreView
+rsview = RecordStoreView()
+params = rsview.get('20231029-161729_cf5215').parameters  # Latest run with UV as of 09.11
+if "models_Qs" in params.inputs:
+    params.inputs.experiments = params.inputs.models_Qs
+    del params.inputs["models_Qs"]
+task = emd.tasks.Calibrate.from_desc(params)
+```
 
 ```{code-cell} ipython3
 ---
@@ -1669,6 +1660,7 @@ slideshow:
   slide_type: ''
 tags: [active-ipynb]
 ---
+task = tasks["infrared"]
 assert task.has_run, "Run the calibration from the command line environment, using `smttask run`. Executing it as part of a Jupyter Book build would take a **long** time."
 ```
 
@@ -1866,7 +1858,7 @@ f"uv_calibration_{desc}"
 Finalized with Inkscape:
 - Align histogram axis with curves axis (use vertical lines with 0.8 pt width)
 - ~~Improve placement of legends~~
-- Put the curve corresponding to `c_chosen` on top. Highlight curve with white surround (2x curve width).
+- Put the curve corresponding to `uv_c_chosen` on top. Highlight curve with white surround (2x curve width).
 - Remove whitespace
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
@@ -1883,7 +1875,7 @@ Finalized with Inkscape:
 
 ## EMD model comparison
 
-Based on the figure above, we choose the value {glue:}`c_chosen` to compute the $\Bemd{}$ criterion between models.
+Based on the figure above, we choose the value {glue:}`uv_c_chosen` to compute the $\Bemd{}$ criterion between models.
 
 ```{code-cell} ipython3
 ---
@@ -2018,7 +2010,7 @@ Approximate noise level ranges (low $s$ ⤇ high noise):
 :::{note}
 :class: margin
 
-- The Poisson noise (Eq. {eq}`eq_code_poisson-noise`) has variance $\frac{\Bspec}{s}$, and therefore its standard deviation scales only as $\Bspec^{\tfrac{1}{2}}$. Since different $λ$ ranges lead to different orders of magnitude for $\Bspec$, if we kept the same $s$ for all rows, we would not see similar amounts of spread. This is why we decrease $s$ in the last row, where wavelength ($λ$) is lower.
+- The Poisson noise (Eq. {eq}`eq_code_poisson-noise`) has variance $\frac{\Bspec}{s}$, and therefore its standard deviation scales only as $\Bspec^{1/2}$. Since different $λ$ ranges lead to different orders of magnitude for $\Bspec$, if we kept the same $s$ for all rows, we would not see similar amounts of spread. This is why we decrease $s$ in the last row, where wavelength ($λ$) is lower.
 :::
 
 ```{code-cell} ipython3
@@ -2071,6 +2063,16 @@ legend_specs["top_orig"] = dict(legend_specs["top"])  # `dict` to force a copy
 legend_specs["top"].update({"mode": None, 'bbox_to_anchor': (-0.3, 1.02, 1.0, 0.102)})
 ```
 
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+:::{note}
+:class: margin
+
+For the last row we use the $σ$ and $T$ values obtained by fitting the original dataset.
+This is because the Rayleigh-Jeans model is so bad in the UV region, that the fit doesn’t converge.
+For pedagogical reasons we want to illustrate this extreme case, but in practice the fact that the fit doesn’t converge should be reason enough to reject the Rayleigh-Jeans model.
+:::
+
 ```{code-cell} ipython3
 ---
 editable: true
@@ -2106,7 +2108,16 @@ for i, panel in enumerate(_panels):
     if i % 3:
         hooks.extend([viz.no_spine_hook("left"), viz.no_yticks_hook])
     if i < 6:
-        hooks.extend([viz.hide_minor_ticks_hook])
+        def major_formatter(x, pos): return f"{x:.3g}"
+        def minor_formatter(x, pos): return r"$6$" if x == 6 else r"$20$" if x == 20 else ""
+        hooks.extend([viz.hide_minor_ticks_hook,
+                      viz.set_minor_xticks_formatter(minor_formatter),
+                      viz.set_major_xticks_formatter(major_formatter)])
+    else:
+        def major_formatter(x, pos): return f"{x:.3g}"
+        def minor_formatter(x, pos): return r"$0.2$" if x == 0.2 else r"$3$" if x == 3 else ""
+        hooks.extend([viz.set_major_xticks_formatter(major_formatter),
+                      viz.set_minor_xticks_formatter(minor_formatter)])
     panel.opts(logx=True, aspect=3, hooks=hooks, fontscale=1.3)
     #_panels[i] = panel
 data_layout = hv.Layout(_panels)
@@ -2143,16 +2154,6 @@ data_layout \
 :class: margin
 
 Together, `get_ppfs` and `plot_Rdists` condense almost the entire EMD pipeline to two functions.
-:::
-
-+++
-
-:::{note}
-:class: margin
-
-For the last row we use the $σ$ and $T$ values obtained by fitting the original dataset.
-This is because the Rayleigh-Jeans model is so bad in the UV region, that the fit doesn’t converge.
-For pedagogical reasons we want to illustrate this extreme case, but in practice the fact that the fit doesn’t converge should be reason enough to reject the Rayleigh-Jeans model.
 :::
 
 ```{code-cell} ipython3
@@ -2287,7 +2288,7 @@ viz.save(Rdist_layout, config.paths.figures/"uv_Rdist-grid.svg")
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
-See [./Ex_UV_criteria-comparison.ipynb]().
+See [](./Ex_UV_criteria-comparison.ipynb).
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
@@ -2327,7 +2328,7 @@ glue("data_B0", data_B0.m, raw_html=viz.format_scientific(data_B0.m, 2, format='
 glue("Bunits", f"{Bunits:~P}", raw_latex=f"{Bunits:~Lx}",
      raw_myst=viz.tex_frac_to_solidus(f"{Bunits:~L}"))
     # {:~L} uses \frac{}{}, but we want to use Bunits in a denom, so we replace with {}/{}
-sunits = data_noise_s.units
+#sunits = data_noise_s.units
 glue("sunits", f"{sunits:~P}", raw_latex=f"{sunits:~Lx}",
      raw_myst=viz.tex_frac_to_solidus(f"{sunits:~L}"))
 
@@ -2373,6 +2374,12 @@ glue("color_Planck", color_labels.Planck)
 ```
 
 ```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [remove-input]
+---
 emd.utils.GitSHA()
 ```
 
