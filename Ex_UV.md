@@ -1618,6 +1618,7 @@ The code below creates task files which can be executed from the command line wi
 editable: true
 slideshow:
   slide_type: ''
+tags: [active-ipynb]
 ---
     for key, task in tasks.items():
         if not task.has_run:  # Don’t create task files for tasks which have already run

@@ -1283,12 +1283,12 @@ for Ωkey, Ω in Ωdct.items():
 #
 #     smttask run --import config <task file>
 
-    # %% editable=true slideshow={"slide_type": ""}
-    for key, task in tasks.items():
-        if not task.has_run:  # Don’t create task files for tasks which have already run
-            Ω = task.experiments
-            taskfilename = f"uv_calibration_{key}_N={Ω.N}_c={task.c_list}"
-            task.save(taskfilename)
+# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
+#     for key, task in tasks.items():
+#         if not task.has_run:  # Don’t create task files for tasks which have already run
+#             Ω = task.experiments
+#             taskfilename = f"uv_calibration_{key}_N={Ω.N}_c={task.c_list}"
+#             task.save(taskfilename)
 
 # %% [markdown]
 # ### Analysis
