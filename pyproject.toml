@@ -14,8 +14,8 @@ readme = "README.md"
 
 python = "^3.9"
 
-emd-falsify = {git = "https://github.com/alcrene/emd-falsify.git"}
-pyloric-simulator = { git = "https://github.com/alcrene/pyloric-network-simulator.git" }
+emd-falsify = { git = "https://github.com/alcrene/emd-falsify.git", rev = "4d90db7d52efeed9b930ff51f8f62c5f02056f06" }
+pyloric-simulator = { git = "https://github.com/alcrene/pyloric-network-simulator.git", tag = "v0.1.0" }
 #colored-noise = { git = "git@github.com:alcrene/colored-noise.git" }
 valconfig = ">=0.1.2-rc3"
 
@@ -48,7 +48,7 @@ phantomjs = "*"
 pillow = "*"
 
 # Recording parameters and results
-smttask = ">0.2.0-rc4"
+smttask = ">=0.2.0"
 scityping = ">0.6.3"
 texsoup = "^0.3.1"
 
