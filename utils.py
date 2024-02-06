@@ -258,7 +258,7 @@ def get_rng(*args: list[int|float|bytes|str]):
 
        That said, even without consistent arguments, the probability is low, and
        in the case it happens, a `SeedCollisionError` (subclass of
-       `RuntimeError` )is raised.
+       `RuntimeError`) is raised.
     """
     # Arguments may contain nested tuples: Flatten them
     new_args = flatten(args)

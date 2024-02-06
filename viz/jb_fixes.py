@@ -1,6 +1,6 @@
 """
 Some fixes which are only relevant for Jupyter Book – i.e. they are used to
-make the inlined documentation nicer, but don’t affect the simulator itself.
+make the inlined documentation nicer, but don’t affect computations.
 """
 
 def display_dataframe_with_math(df, raw=False):
@@ -21,7 +21,7 @@ def convert_tex_to_html(html, raw=False):
     """
     Given some HTML text which may contain dollar-delimited math,
     use MyST-Parser to convert any such math into pure HTML.
-    For simple expressions, this results in HTML which display reasonably well
+    For simple expressions, this results in HTML which displays reasonably well
     without the need for external librairies like MathJax.
 
     .. Todo:: Find a way to optionally export MathJax nodes instead of plain HTML.

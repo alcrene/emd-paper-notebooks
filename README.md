@@ -17,7 +17,7 @@ Notebooks are stored in a plain text format using [jupytext](https://jupytext.re
   This is not required however: using normal directories also works.
 
   - _data_
-    + If you want to reproduce the results from the paper, you may download are results directory from here: (TODO: UPLOAD AND ADD LINK). In particular this will allow you to skip the calibration computations (which can take days on a simple machine), if you leave the task parameters unchanged.
+    + If you want to reproduce the results from the paper, you may download our results directory from here: (TODO: UPLOAD AND ADD LINK). In particular this will allow you to skip the calibration computations, which can take days on a simple machine. (The calculations will still be recomputed if you change the task parameters.)
 
   - _figures_
     + If you are also using the [paper repo](https://github.com/alcrene/emd-paper) to rebuild our paper, the produced figures must be in this location:
@@ -27,24 +27,24 @@ Notebooks are stored in a plain text format using [jupytext](https://jupytext.re
       The easiest way to achieve this is to make _figures_ a symlink to that location, so notebooks automatically place figures in the right directory when they are run. Otherwise, it is also possible of course to run the notebooks and copy the figures directory to the right location afterwards.
 
 * Create a virtual environment and IPython kernel for running the notebooks.
-  The recommended and best tested procedure is to use [poetry](https://python-poetry.org/docs/#installation). This repo includes a `poetry.lock` file to make the execution environment fully reproducible.
+  The recommended and best tested procedure is to use [poetry](https://python-poetry.org/docs/#installation): this repo includes a `poetry.lock` file to make the execution environment fully reproducible.
   However it is also possible to install within any virtual environment using the requirements file.
   
-  - **poetry installation**
+  - **Poetry installation**
   
     + Install the dependencies:
   
           poetry install --no-root
         
     + Create an IPython kernel so the environment is accessible to Jupyter notebooks.
-      It is easiest to keep the kernel names unchanged, so the match the names saved within the notebooks
+      It is easiest to keep the kernel names unchanged, so they match the names saved within the notebooks
       This is doubly recommended if you intend to rebuild the paper. (As otherwise each notebook would need to be opened and its kernel updated.)
     
           poetry shell
           python -m ipykernel install --user --name emd-paper --display-name "Python (emd-paper)"        
           deactivate
 
-  - **alternative installation**
+  - **Alternative installation**
   
     + Create a virtual environment, either with Python’s builtin `venv` 
     
@@ -68,7 +68,7 @@ Notebooks are stored in a plain text format using [jupytext](https://jupytext.re
 
 * Initialize a [SumatraTask](https://sumatratask.readthedocs.io/) project:
 
-      smttask init
+      smttask project init
 
 ## Configuration
 

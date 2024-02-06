@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.15.0
 kernelspec:
   display_name: Python (emd-paper)
   language: python
@@ -129,7 +129,7 @@ dataset_list = [Dataset("Criterion comparison", L, λmin, λmax, s, T=table_T, B
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
-For comparibility, we write all criteria as ratios of probabilities, so a criterion $B^C_{AB}$ is understood as
+For comparability, we write all criteria as ratios of probabilities, so a criterion $B^C_{AB}$ is understood as
 
 > Model $A$ is $B^C_{AB}$ times more probable than model $B$.
 
@@ -205,7 +205,7 @@ $\logL$: Log likelihood function
   $$\logL_a(σ, T)  := \sum_{i=1}^L -Q_{a}(\Bspec_i \mid λ_i, σ, T) \,,$$
   since we defined the loss $Q$ to be the negative log probability.
 
-  To assign a likelihood to a model, some criteria use $\max_{σ, T} \ll_a(σ, T)$; i.e. they evaluate the at the fitted parameters. In the following we denote this $\ll_a(\hat{σ}_a, \hat{T}_a)$.
+  To assign a likelihood to a model, some criteria use $\max_{σ, T} \logL_a(σ, T)$; i.e. they evaluate the at the fitted parameters. In the following we denote this $\logL_a(\hat{σ}_a, \hat{T}_a)$.
 
 ```{code-cell} ipython3
 ---
@@ -672,20 +672,22 @@ short_caption = "Comparison of different model selection criteria."
 # '@' is a hack to prevent our own preprocessors from substituting \cref with {numref}
 caption = r"""
 \textbf{Comparison of different model selection criteria} for variations of the dataset shown in
-\@cref{fig_UV_setup}. Criteria compare the Planck ($\mathrm{P}$) model against the 
-Rayleigh-Jeans ($\mathrm{RJ}$) model and are evaluated for different dataset sizes
+\@cref{fig_UV_setup}. Criteria compare the Planck model ($\MP$) against the 
+Rayleigh-Jeans model ($\MRJ$) and are evaluated for different dataset sizes
 ($L$), different levels of noise ($s$) and different wavelength windows ($λ$); $L$, $s$ and $λ$ values were chosen to span the
-transition from weak/ambiguous evidence for either $\mathrm{P}$ or $\mathrm{RJ}$,
-to reasonably strong evidence for $\mathrm{P}$.
-The 15 to 30 $\mathrm{nm}$ window for $λ$ corresponds to the data that shown in \@cref{fig_UV_setup},
-while the 20 to 4000 $\mathrm{nm}$ window stretches further into the microwave range, where the two models are nearly indistinguishable.
+transition from weak/ambiguous evidence for either $\MP$ or $\MRJ$,
+to reasonably strong evidence for $\MP$.
+The 15 to 30 $\mathrm{\mu m}$ window for $λ$ corresponds to the data that shown in \@cref{fig_UV_setup},
+while the 20 to 4000 $\mathrm{\mu m}$ window stretches further into the microwave range, where the two models are nearly indistinguishable.
 As in \@cref{fig_uv-example_r-distributions}, we perform calculations under both positive
 and null bias conditions (resp.\ ($\mathcal{B}_0 > 0$ and $\mathcal{B}_0 = 0$);
 the former emulates a situation where neither model can fit the data perfectly.
 To allow for comparisons, all criteria are presented as $\log_{10}$ ratios of probabilities,
 even though for non-Bayesian criteria this is not the usual form.
-Positive (negative) values indicate evidence in favour of the Planck (Rayleigh-Jeans) model.
-Expressions for all criterian are given in \@cref{app_expressions-other-criteria}.
+Positive (negative) values indicate evidence in favour of the Planck (Rayleigh-Jeans) model:
+for example, a value of -1 is interpreted as $\MP$ being 10 times less likely than $\MRJ$,
+while a value of +2 would suggest that $\MP$ is 100 times \emph{more} likely than $\MRJ$.
+Expressions for all criteria are given in \@cref{app_expressions-other-criteria}.
 Note that especially for small $L$, some values are sensitive to the random seed used to generate the data.
 """.replace("@", "")
 ```
@@ -698,6 +700,7 @@ slideshow:
 tags: [remove-cell]
 ---
 def tex2md(text):
+    text = re.sub(r"\\emph{([^}]*)}", r"*\1*", text)
     text = re.sub(r"\\textbf{([^}]*)}", r"**\1**", text)
     text = re.sub(r"\\cref{([^}]*)}", r"{numref}`\1`", text)
     return text

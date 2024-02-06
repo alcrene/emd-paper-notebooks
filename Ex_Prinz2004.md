@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.15.0
 kernelspec:
   display_name: Python (emd-paper)
   language: python
@@ -931,6 +931,27 @@ However it only does so for the selected candidate models – if we omit to incl
 
 ::::
 
+```{code-cell} ipython3
+---
+editable: true
+jupyter:
+  source_hidden: true
+slideshow:
+  slide_type: ''
+tags: [active-ipynb, remove-cell]
+---
+xarr = np.linspace(-6, 6)
+yarr = stats.norm.logpdf(xarr, loc=-2, scale=1.5)/2 + stats.cauchy.logpdf(xarr, loc=3, scale=0.05)/2
+curve = hv.Curve(zip(xarr, yarr), kdims=["θ"], vdims=["log likelihood"])
+curve.opts(hooks=[viz.no_yticks_hook, viz.despine_hook, viz.no_spine_hook("left")],
+           backend="matplotlib")
+_kdims = ["θ", "log likelihood"]
+θmax=2.96; θrobust=-1  # Obtained by inspecting xarr and np.diff(yarr)
+fig = hv.VLine(θrobust, kdims=_kdims) * hv.VLine(θmax, kdims=_kdims) * curve
+fig.opts(hv.opts.VLine(color="#BBBBBB", linestyle="dashed", linewidth=1.5))
+glue("fig_sensitivity_max_likelihood", fig)
+```
+
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
 Loss functions $q$ typically only require the observed data as argument, so depending whether `data_model` returns $x$ and $y$ separately as `x` and `y` or as single object `xy`, the signature for $q$ should be either
@@ -1070,7 +1091,7 @@ All this to say that in the vast majority of cases, we expect that the most conv
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
-In order to create a set of risk samples for each candidate model, we define for each a generative model which includes the expected noise (in this case additive Gaussian noise with parameter $σ$ fitted above). For each model, we then generate a **synthetic** dataset, evaluate the risk $q$ at every data point, and get a distribution for $q$. We represent this distribution by its quantile function, a.k.a. point probability function (PPF).
+In order to create a set of risk samples for each candidate model, we define for each a generative model which includes the expected noise (in this case additive Gaussian noise with parameter $σ$ fitted above). For each model, we then generate a **synthetic** dataset, evaluate the risk $q$ at every data point, and get a distribution for $q$. We represent this distribution by its quantile function, a.k.a. percent point function (PPF).
 
 :::{hint}
 :class: margin
@@ -1337,76 +1358,63 @@ We can conclude from these remarks that calibration works best when the models a
 :gutter: 2
 
 :::{grid-item-card}
-:columns: 12 12 8 8
+:columns: 12 12 6 6
 
-**Observation noise model $ξ$**
-^^^^^^^^^^^^^
+**Observation noise model**
+^^^^^^^^^^^^^^^^^^^^^^^
 
-One of `normal`, `cauchy` or `uniform`. The parameter $μ$ is set to 0 and $σ_o$ i drawn from the distribution defined below.
+One of *Gaussian* or *Cauchy*. The distributions are centered and $σ_o$ is drawn from the distribution defined below.
 Note that this is the model used to *generate* data. The candidate models always evaluate their loss assuming a Gaussian observation model.
 
-Gaussian
-  ~ $\begin{aligned}p(ξ) &= \frac{1}{\sqrt{2πσ}} \exp\left(-\frac{(ξ-μ)^2}{2σ^2}\right)
-     &\quad &\texttt{scipy.stats.normal}(μ, σ)\end{aligned}$
-  
-Cauchy
-  ~ $\begin{aligned} p(ξ) = \frac{2}{πσ \left[ 1 + \left( \frac{(ξ-μ)^2}{σ/2} \right)  \right]}
-     &\quad &\texttt{scipy.stats.cauchy}(μ, σ/2) \end{aligned}$
-  
-Uniform
-  ~ $\begin{aligned} p(ξ) = \begin{cases}\frac{1}{2σ} & \text{if } \lvert ξ - μ \rvert < σ \\ 0 & \text{otherwise} \end{cases}
-    &\quad \texttt{scipy.stats.uniform}(μ-σ, 2σ) \end{aligned}$
+- *Gaussian*:
+  $\begin{aligned}p(ξ) &= \frac{1}{\sqrt{2πσ}} \exp\left(-\frac{ξ^2}{2σ_o^2}\right)
+     \end{aligned}$
+- *Cauchy*:
+  $\begin{aligned} p(ξ) = \frac{2}{πσ \left[ 1 + \left( \frac{ξ^2}{σ_o/2} \right)  \right]}
+     \end{aligned}$
+<!-- - *Uniform*:
+  $\begin{aligned} p(ξ) = \begin{cases}\frac{1}{2σ_o} & \text{if } \lvert ξ \rvert < σ_o \\ 0 & \text{otherwise} \end{cases}
+    \end{aligned}$ -->
 :::
 
 :::{grid-item-card}
 :columns: 12 12 6 6
 
 **Observation noise strength $σ_o$**
-^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Low noise
-  ~ $\log σ \sim \nN(0, 0.5^2)$
-  ~ $\texttt{scipy.stats.lognorm}(\texttt{s}=0.5, \texttt{scale=}e^0)$
-  
-High noise
-  ~ $\log σ \sim \nN(1, 0.5^2)$
-  ~ $\texttt{scipy.stats.lognorm}(\texttt{s}=0.5, \texttt{scale=}e^1)$
+- *Low noise*:
+  $\log σ_o \sim \nN({glue:raw}`../notebooks/Ex_Prinz2004.ipynb::sigmao_low_mean:`, ({glue:raw}`../notebooks/Ex_Prinz2004.ipynb::sigmao_std:`)^2)$
+- *High noise*:
+  $\log σ_o \sim \nN({glue:raw}`../notebooks/Ex_Prinz2004.ipynb::sigmao_high_mean:`, ({glue:raw}`../notebooks/Ex_Prinz2004.ipynb::sigmao_std:`)^2)$
 :::
 
 :::{grid-item-card}
-:columns: 12 4 4 4
+:columns: 12 6 6 6
 
-**Input noise strength $σ_i$**
-^^^^^^^^^^^^^
+**External input strength $σ_i$**
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The parameter $σ_i$ sets the strength of the input noise such that $\langle{I_{\mathrm{ext}}^2\rangle} = σ_i^2$.
 
-No Iext
-~ $σ_i = 0$
-
-Weak input
-~ $\log σ_i \sim \nN(-7, 0.5^2)$
-
-Strong input
-~ $\log σ_i \sim \nN(-5, 0.5^2)$
+- *Weak input*:
+  $\log σ_i \sim \nN({glue:raw}`../notebooks/Ex_Prinz2004.ipynb::sigmai_weak_mean:`, ({glue:raw}`../notebooks/Ex_Prinz2004.ipynb::sigmai_std:`)^2)$
+- *Strong input*:
+  $\log σ_i \sim \nN({glue:raw}`../notebooks/Ex_Prinz2004.ipynb::sigmai_strong_mean:`, ({glue:raw}`../notebooks/Ex_Prinz2004.ipynb::sigmai_std:`)^2)$
 :::
 
 :::{grid-item-card}
-:columns: 12 4 4 4
+:columns: 12 6 6 6
 
-**Input noise correlation time $τ$**
-^^^^^^^^^^^^^
+**External input correlation time $τ$**
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The parameter $σ_i$ sets the correlation time of the input noise such that $\langle{I_{\mathrm{ext}}(t)I_{\mathrm{ext}}(t+s)\rangle} = σ_i^2 e^{s^2/2τ^2}$.
 
-No Iext
-  ~ Undefined
-
-Short input correlations
-  ~ $\log_{10} τ \sim \Unif([10\mathrm{ms}, 100\mathrm{ms}])$
-
-Long input correlation
-  ~ $\log_{10} τ \sim \Unif([100\mathrm{ms}, 1000\mathrm{ms}])$
+- *Short correlations*: 
+  $\log_{10} τ \sim \Unif([{glue:raw}`../notebooks/Ex_Prinz2004.ipynb::tau_short_min:`, {glue:raw}`../notebooks/Ex_Prinz2004.ipynb::tau_short_max:`])$
+- *Long correlation*: 
+  $\log_{10} τ \sim \Unif([{glue:raw}`../notebooks/Ex_Prinz2004.ipynb::tau_long_max:`, {glue:raw}`../notebooks/Ex_Prinz2004.ipynb::tau_long_max:`])$
 :::
 
 ::::
@@ -1758,21 +1766,6 @@ For an initial pilot run, we found $N=64$ or $N=128$ to be good numbers. These n
 A subsequent run with $N \in \{256, 512, 1024\}$ can then refine and smooth the curve.
 :::
 
-+++ {"editable": true, "slideshow": {"slide_type": ""}}
-
-    #N = 64
-    N = 512
-    Ωdct = {(f"{Ω.a} vs {Ω.b}", Ω.ξ_name, Ω.σo_dist, Ω.τ_dist, Ω.σi_dist): Ω
-            for Ω in [
-                EpistemicDist(N, "A", "D", "Gaussian", "low noise", "short input correlations", "weak input"),
-                EpistemicDist(N, "C", "D", "Gaussian", "low noise", "short input correlations", "weak input"),
-                EpistemicDist(N, "A", "B", "Gaussian", "low noise", "short input correlations", "weak input"),
-                EpistemicDist(N, "A", "D", "Gaussian", "low noise", "short input correlations", "strong input"),
-                EpistemicDist(N, "C", "D", "Gaussian", "low noise", "short input correlations", "strong input"),
-                EpistemicDist(N, "A", "B", "Gaussian", "low noise", "short input correlations", "strong input"),
-            ]
-           }
-
 ```{code-cell} ipython3
 ---
 editable: true
@@ -1790,6 +1783,27 @@ N = 512
             )
        }
 ```
+
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+:::{note}
+The code cell above runs a large number of tasks, which took many days on a small server. For our initial run we selected specifically the 6 runs we wanted to appear in the the main text:
+
+```python
+#N = 64
+N = 512
+Ωdct = {(f"{Ω.a} vs {Ω.b}", Ω.ξ_name, Ω.σo_dist, Ω.τ_dist, Ω.σi_dist): Ω
+        for Ω in [
+            EpistemicDist(N, "A", "D", "Gaussian", "low noise", "short input correlations", "weak input"),
+            EpistemicDist(N, "C", "D", "Gaussian", "low noise", "short input correlations", "weak input"),
+            EpistemicDist(N, "A", "B", "Gaussian", "low noise", "short input correlations", "weak input"),
+            EpistemicDist(N, "A", "D", "Gaussian", "low noise", "short input correlations", "strong input"),
+            EpistemicDist(N, "C", "D", "Gaussian", "low noise", "short input correlations", "strong input"),
+            EpistemicDist(N, "A", "B", "Gaussian", "low noise", "short input correlations", "strong input"),
+        ]
+       }
+```
+:::
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
@@ -1840,7 +1854,7 @@ slideshow:
 tags: [active-ipynb, skip-execution]
 ---
     for key, task in tasks.items():
-        if False or not task.has_run:  # Don’t create task files for tasks which have already run
+        if True or not task.has_run:  # Don’t create task files for tasks which have already run
             Ω = task.experiments
             taskfilename = f"prinz_calibration__{Ω.a}vs{Ω.b}_{Ω.ξ_name}_{Ω.σo_dist}_{Ω.τ_dist}_{Ω.σi_dist}_N={Ω.N}_c={task.c_list}"
             task.save(taskfilename)
@@ -1859,20 +1873,8 @@ from Ex_Prinz2004 import *
 hv.extension("matplotlib", "bokeh")
 ```
 
-+++ {"editable": true, "slideshow": {"slide_type": ""}}
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell", "active-ipynb"]}
 
-:::{admonition} TODO: UPDATE
-:class: error
-For the main text we show only one calibration figure ($A$ vs $C$, *uniform*, *biased*, *wide*). Additional calibration figures are given in the appendix.
-:::
-
-```{code-cell} ipython3
----
-editable: true
-slideshow:
-  slide_type: ''
-tags: [remove-cell, active-ipynb]
----
     # Workaround to be able run notebook while a new calibration is running:
     # Use the last finished task
     from smttask.view import RecordStoreView
@@ -1881,37 +1883,14 @@ tags: [remove-cell, active-ipynb]
     task = emd.tasks.Calibrate.from_desc(rsview.last.parameters)
     #task = emd.tasks.Calibrate.from_desc(rsview.get('20231017-222339_1c9062').parameters)
     #task = emd.tasks.Calibrate.from_desc(rsview.get('20231024-000624_baf0b3').parameters)
-```
 
-```{code-cell} ipython3
----
-editable: true
-slideshow:
-  slide_type: ''
-tags: [active-ipynb, remove-cell]
----
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["active-ipynb", "remove-cell"]}
+
     task = tasks['C vs D', 'Gaussian', 'low noise', 'short input correlations', 'weak input']
-```
 
-```{code-cell} ipython3
----
-editable: true
-slideshow:
-  slide_type: ''
-tags: [active-ipynb, remove-cell]
----
     assert all(task.has_run for task in tasks.values()), "Run the calibrations from the command line environment, using `smttask run`. Executing it as part of a Jupyter Book build would take a **long** time."
-```
 
-```{code-cell} ipython3
----
-editable: true
-slideshow:
-  slide_type: ''
-tags: [active-ipynb, remove-cell]
----
     calib_results = task.unpack_results(task.run())
-```
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
@@ -2143,6 +2122,10 @@ Calibration curve with shortened domain
 ~ If it is acceptable to change the calibration distribution (or to add one to the test suite), then the most common way to address this is to ensure the distribution produces conditions where $\Bemd{}$ can achieve maximum confidence – for example by having conditions with negligeable observation noise.
 :::
 
++++
+
+#### Calibration figure: main text
+
 ```{code-cell} ipython3
 ---
 editable: true
@@ -2232,9 +2215,132 @@ Finalized with Inkscape:
 - Move legend above plots
 - Add the model comparison distributions (below)
 
++++
+
+#### Calibration figure: Appendix
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [active-ipynb]
+---
+fig = hv.Layout([hv.Text(0, 0, f"{σo_dist}\n{ξ_name}\n\n{σi_dist}\n{τ_dist}")
+                 for σi_dist in ["weak input", "strong input"]
+                 for τ_dist in ["short input correlations", "long input correlations"]
+                 for σo_dist in ["low noise", "high noise"]
+                 for ξ_name in ["Gaussian", "Cauchy"]])
+fig.opts(
+    hv.opts.Layout(sublabel_format="", tight=True),
+    hv.opts.Overlay(show_legend=False),
+    hv.opts.Curve(hooks=[viz.noaxis_hook])
+)
+```
+
+$\mathcal{M}_A$ vs $\mathcal{M}_B$
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [active-ipynb]
+---
+a, b = ("A", "B")#, ("A", "D"), ("C", "D")
+fig = hv.Layout([panel_calib_curve(tasks[(f"{a} vs {b}", ξ_name, σo_dist, τ_dist, σi_dist)], c_list)
+                 for σi_dist in ["weak input", "strong input"]
+                 for τ_dist in ["short input correlations", "long input correlations"]
+                 for σo_dist in ["low noise", "high noise"]
+                 for ξ_name in ["Gaussian", "Cauchy"]])
+fig.opts(
+    hv.opts.Layout(sublabel_format="", fig_inches=1.1, hspace=.1, vspace=.1),
+    hv.opts.Overlay(show_legend=False),
+    hv.opts.Curve(hooks=[viz.noaxis_hook], linewidth=2)
+)
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [active-ipynb]
+---
+viz.save(fig, config.paths.figures/f"prinz_calibrations_all_{a}vs{b}_raw.svg")
+```
+
+$\mathcal{M}_A$ vs $\mathcal{M}_D$
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [active-ipynb]
+---
+a, b = ("A", "D")#, ("C", "D")
+fig = hv.Layout([panel_calib_curve(tasks[(f"{a} vs {b}", ξ_name, σo_dist, τ_dist, σi_dist)], c_list)
+                 for σi_dist in ["weak input", "strong input"]
+                 for τ_dist in ["short input correlations", "long input correlations"]
+                 for σo_dist in ["low noise", "high noise"]
+                 for ξ_name in ["Gaussian", "Cauchy"]])
+fig.opts(
+    hv.opts.Layout(sublabel_format="", fig_inches=1.1, hspace=.1, vspace=.1),
+    hv.opts.Overlay(show_legend=False),
+    hv.opts.Curve(hooks=[viz.noaxis_hook], linewidth=2)
+)
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [active-ipynb]
+---
+viz.save(fig, config.paths.figures/f"prinz_calibrations_all_{a}vs{b}_raw.svg")
+```
+
+$\mathcal{M}_C$ vs $\mathcal{M}_D$
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [active-ipynb]
+---
+a, b = ("C", "D")
+fig = hv.Layout([panel_calib_curve(tasks[(f"{a} vs {b}", ξ_name, σo_dist, τ_dist, σi_dist)], c_list)
+                 for σi_dist in ["weak input", "strong input"]
+                 for τ_dist in ["short input correlations", "long input correlations"]
+                 for σo_dist in ["low noise", "high noise"]
+                 for ξ_name in ["Gaussian", "Cauchy"]])
+fig.opts(
+    hv.opts.Layout(sublabel_format="", fig_inches=1.1, hspace=.1, vspace=.1),
+    hv.opts.Overlay(show_legend=False),
+    hv.opts.Curve(hooks=[viz.noaxis_hook], linewidth=2)
+)
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [active-ipynb]
+---
+viz.save(fig, config.paths.figures/f"prinz_calibrations_all_{a}vs{b}_raw.svg")
+```
+
+Finalize in Inkscape:
+- Add the axes (in the same style as `GridSpace`, but GridSpace only supports one dimension per axis)
+- Add a title: $\mathcal{M}_A \text{ vs } \mathcal{M}_B$
+
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
-#### Diagnostics: Exploring calibration experiments
+### Diagnostics: Exploring calibration experiments
 
 ```{code-cell} ipython3
 ---
@@ -2381,9 +2487,11 @@ def get_ppfs(ω: Experiment):
     })
     return mixed_ppf, synth_ppf
 
-def ppfs_for_experiment(ω: Experiment, show_data_model_text=True):
+def ppfs_for_experiment(ω: Experiment, show_data_model_text=True,
+                        backend:Literal["bokeh","matplotlib"]="bokeh"):
+    # For diagnostic plots we typically use bokeh, which has better interactivity
     Φarr = np.linspace(0, 1, 1024)
-    dims = viz.dims.bokeh  # For diagnostic plots we typically use bokeh, which has better interactivity
+    dims = viz.dims[backend]
     mixed_ppf, synth_ppf = get_ppfs(ω)
     curve_mixed_a = hv.Curve(zip(Φarr, mixed_ppf[ω.a](Φarr)), kdims=dims.Φ, vdims=dims.q,
                              group="mixed", label=ω.a)
@@ -2452,7 +2560,7 @@ for c in [2**-4, 2**0, 2**4]:
                           .opts(color=get_color(a), backend="bokeh")
                           for Φhat, qhat in qpaths]
 
-    panel = (ppfs_for_experiment(ω, show_data_model_text=False)
+    panel = (ppfs_for_experiment(ω, show_data_model_text=False, backend="matplotlib")
              * hv.Overlay(qhat_curves[ω.a]) * hv.Overlay(qhat_curves[ω.b]))
     title = f"$c={viz.format_pow2(c, 'latex')}$".replace("{", "{{").replace("}", "}}")
     panel.opts(hv.opts.Curve("Sampled_q", alpha=0.375),

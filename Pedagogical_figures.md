@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.2
+    jupytext_version: 1.15.0
 kernelspec:
   display_name: Python (emd-paper)
   language: python
@@ -85,6 +85,16 @@ viz.save.update_figure_files = True
 editable: true
 slideshow:
   slide_type: ''
+tags: [remove-cell]
+---
+sanitize = hv.core.util.sanitize_identifier_fn
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
 ---
 @dataclass
 class colors(viz.ColorScheme):
@@ -147,9 +157,9 @@ synth_ppf = synth_ppfs[phys_model]
 def δemd(Φarr): return abs(synth_ppf(Φarr) - mixed_ppf(Φarr))
 
 mixed_curve = hv.Curve(zip(Φarr, mixed_ppf(Φarr)),
-                       kdims=[dims.Φ], vdims=[dims.q], label="mixed PPF")
+                       kdims=[dims.Φ], vdims=[dims.q], label=r"mixed PPF ($\tilde{q}$)")
 synth_curve = hv.Curve(zip(Φarr, synth_ppf(Φarr)),
-                       kdims=[dims.Φ], vdims=[dims.q], label="synth PPF")
+                       kdims=[dims.Φ], vdims=[dims.q], label=r"synth PPF ($q^*$)")
 area = hv.Area((Φarr, mixed_ppf(Φarr) - c*δemd(Φarr), mixed_ppf(Φarr) + c*δemd(Φarr)),
                kdims=[dims.Φ], vdims=[dims.q, "q2"], label="δemd")
 
@@ -159,10 +169,10 @@ ticks = dict(xticks=[0, 0.25, 0.5, 0.75, 1], yticks=[-6, -3, -0, 3, 6],
              xformatter=lambda x: str(x) if x in {0, 1} else "")
 hooks = [viz.despine_hook, viz.xlabel_shift_hook(3), viz.ylabel_shift_hook(2)]
 fig_onlycurves.opts(
-    hv.opts.Curve("Curve.Mixed_PPF", color=colors.mixed),
-    hv.opts.Curve("Curve.Mixed_PPF", color=colors.mixed, backend="bokeh"),
-    hv.opts.Curve("Curve.Synth_PPF", color=colors.synth),
-    hv.opts.Curve("Curve.Synth_PPF", color=colors.synth, backend="bokeh"),
+    hv.opts.Curve(f"Curve.{sanitize(mixed_curve.label)}", color=colors.mixed),
+    hv.opts.Curve(f"Curve.{sanitize(mixed_curve.label)}", color=colors.mixed, backend="bokeh"),
+    hv.opts.Curve(f"Curve.{sanitize(synth_curve.label)}", color=colors.synth),
+    hv.opts.Curve(f"Curve.{sanitize(synth_curve.label)}", color=colors.synth, backend="bokeh"),
     hv.opts.Area(facecolor=colors.δemd, edgecolor="none", color="none", backend="matplotlib"),
     hv.opts.Area(fill_color=colors.δemd, line_color=None, backend="bokeh"),
     hv.opts.Overlay(legend_position="top_left", fontscale=1.3, backend="matplotlib"),
@@ -190,7 +200,7 @@ slideshow:
 ---
 rng = utils.get_rng("pedag", "qpaths")
 qpaths = emd.path_sampling.generate_quantile_paths(mixed_ppf, δemd, c=c, M=6, res=10, rng=rng)
-qhat_curves = [hv.Curve(zip(Φhat, qhat), label="PPF sample",
+qhat_curves = [hv.Curve(zip(Φhat, qhat), label=r"PPF realization ($\hat{q}$)",
                         kdims=[dims.Φ], vdims=[dims.q])
                .opts(color=colors.lighten(rng.uniform(-0.2, +0.1)).qhat)
                .opts(color=colors.lighten(rng.uniform(-0.2, +0.1)).qhat, backend="bokeh")
@@ -206,8 +216,8 @@ tags: [hide-input]
 ---
 fig_with_qpaths = area * hv.Overlay(qhat_curves) * mixed_curve * synth_curve
 
-ticks = dict(yticks=[-6, -5, -4, -3, -2, -1],
-             yformatter=lambda y: str(y) if y in {-6, -1} else "")
+ticks = dict(yticks=[-7, -6, -5, -4, -3, -2, -1],
+             yformatter=lambda y: str(y) if y in {-7, -1} else "")
 fig_with_qpaths.opts(
     hv.opts.Curve(**ticks), hv.opts.Area(**ticks),
     hv.opts.Overlay(legend_opts={"loc": "upper left", "bbox_to_anchor":(0.05, 0.85)}),

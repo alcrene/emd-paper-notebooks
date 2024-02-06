@@ -14,8 +14,8 @@ readme = "README.md"
 
 python = "^3.9"
 
-emd-falsify = {git = "git@github.com:alcrene/emd-falsify.git"}
-pyloric-simulator = { git = "git@github.com:alcrene/pyloric-network-simulator.git" }
+emd-falsify = {git = "https://github.com/alcrene/emd-falsify.git"}
+pyloric-simulator = { git = "https://github.com/alcrene/pyloric-network-simulator.git" }
 #colored-noise = { git = "git@github.com:alcrene/colored-noise.git" }
 valconfig = ">=0.1.2-rc3"
 
@@ -29,7 +29,7 @@ tqdm = "*"
 addict = "*"
 more-itertools = "*"
 joblib = "*"
-"flufl.lock" = "*"         # Used by prinz2004 to lock its initialization cache
+"flufl.lock" = "*"         # Used by pyloric-simulator to lock its initialization cache
 pint = "*"
 tabulate = "*"
 
@@ -40,6 +40,7 @@ ipywidgets = "*"  # Required for widgets like progress bars
 holoviews = ">=1.15.3"
 bokeh = "*"
 myst-nb = "^1.0.0"
+sphinx-proof = { git = "https://github.com/executablebooks/sphinx-proof.git" }
 #jupyter_bokeh  # Install in environment containing Jupyter server
 # For bokeh export to png (also used by holoviews)
 selenium = "*"
@@ -47,16 +48,14 @@ phantomjs = "*"
 pillow = "*"
 
 # Recording parameters and results
-smttask = ">=0.2.0-rc3"
+smttask = ">0.2.0-rc4"
 scityping = ">0.6.3"
 texsoup = "^0.3.1"
 
-[[tool.poetry.source]]
-name = "TestPyPI"
-url = "https://test.pypi.org/simple/"
-priority = "supplemental"
-
-
+# [[tool.poetry.source]]
+# name = "TestPyPI"
+# url = "https://test.pypi.org/simple/"
+# priority = "supplemental"
 
 [build-system]
 requires = ["poetry-core"]

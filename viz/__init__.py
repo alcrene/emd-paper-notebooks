@@ -1,3 +1,6 @@
+# + [markdown] tags=[]
+# # Visualization utilities
+
 # + tags=[]
 import seaborn as sns
 import holoviews as hv
@@ -25,6 +28,9 @@ try:
 except ImportError as e:
     logger.error(f"Extended `glue` will not work due to the following error: {e}")
 
+
+# + [markdown] tags=[]
+# ## Custom glue
 
 # + tags=[]
 # Submodule objects to expose at top level
@@ -69,12 +75,15 @@ def glue(name: str, variable, display: bool=True,
         if raw_html : db[name + "__html"]  = str(variable) if raw_html  is True else raw_html
         if raw_latex: db[name + "__latex"] = str(variable) if raw_latex is True else raw_latex
 
-# -
 
+# + [markdown] tags=[]
+# ## Plotting
+
+# + tags=[]
 dims = Dict(
     matplotlib = SimpleNamespace(
         λ  = hv.Dimension("λ", label="wavelength", unit=r"$\mu\mathrm{m}$"),
-        B  = hv.Dimension("B", label="radiance", unit=r"$\mathrm{kW} / \mathrm{sr}^{-1} \cdot \mathrm{m}^{-2} \cdot \mathrm{nm}^{-1}$"),
+        B  = hv.Dimension("B", label="radiance", unit=r"$\mathrm{kW} \cdot \mathrm{sr}^{-1} \cdot \mathrm{m}^{-2} \cdot \mathrm{nm}^{-1}$"),
         t     = hv.Dimension("t", label="time", unit=r"$\mathrm{ms}$"),
         I_ext = hv.Dimension("I_ext", label="external input", unit=r"$\mathrm{nA}$"),
         Δt = hv.Dimension("Δt", label="time lag", unit=r"$\mathrm{ms}$"),
@@ -82,8 +91,8 @@ dims = Dict(
         I2 = hv.Dimension("I2", label=r"$\langle I^2 \rangle$", unit=r"$\mathrm{nA}^2$"),
         V  = hv.Dimension("V", unit=r"$\mathrm{mV}$"),
         logL = hv.Dimension("logL", label="log likelihood"),
-        Φ  = hv.Dimension("Φ", label="cum. prob. ($Φ$)"),
-        q  = hv.Dimension("q", label="loss ($q$)"),
+        Φ  = hv.Dimension("Φ", label=r"cum. prob. ($\Phi$)"),
+        q  = hv.Dimension("q", label="quantile ($q$)"),
         Bemd = hv.Dimension("Bemd", label=r"$B^{\mathrm{EMD}}$"),
         Bconf = hv.Dimension("Bconf", label=r"$B^{\mathrm{conf}}$"),
         c = hv.Dimension("c", label="$c$"),
@@ -91,7 +100,7 @@ dims = Dict(
     ),
     bokeh = SimpleNamespace(
         λ  = hv.Dimension("λ", label="wavelength", unit=r"$μm$"),
-        B  = hv.Dimension("B", label="radiance", unit=r"$kW / sr⁻¹ m⁻² nm⁻¹"),
+        B  = hv.Dimension("B", label="radiance", unit=r"$kW \cdot sr⁻¹ m⁻² nm⁻¹"),
         t     = hv.Dimension("t", label="time", unit="ms"),
         I_ext = hv.Dimension("I_ext", label="external input", unit="nA"),
         Δt = hv.Dimension("Δt", label="time lag", unit="ms"),
@@ -100,13 +109,16 @@ dims = Dict(
         V  = hv.Dimension("V", unit="mV"),
         logL = hv.Dimension("logL", label="log likelihood"),
         Φ  = hv.Dimension("Φ", label="cum. prob. (Φ)"),
-        q  = hv.Dimension("q", label="loss (q)"),
+        q  = hv.Dimension("q", label="quantile (q)"),
         Bemd = hv.Dimension("Bemd"),
         Bconf = hv.Dimension("Bconf"),
         c = hv.Dimension("c"),
         R = hv.Dimension("R", label="expected risk (R)")
     )
 )
+
+
+# -
 
 def save(*args, **kwargs):
     """
@@ -122,9 +134,14 @@ def save(*args, **kwargs):
         hv.save(*args, **kwargs)
 save.update_figure_files = True
 
-# ## Plot hooks
+# + [markdown] tags=[]
+# ### Plot hooks
 
+# + tags=[]
 import matplotlib as mpl
+
+
+# -
 
 def noaxis_hook(plot, element):
     """Holoviews hook for plots using the matplotlib backend.
@@ -148,6 +165,10 @@ def no_spine_hook(*sides):
             ax.spines[side].set_visible(False)
     return hook
 
+def set_major_xticks_formatter(formatter):
+    def hook(plot, element):
+        plot.handles["axis"].get_xaxis().set_major_formatter(formatter)
+    return hook
 def set_xticklabels_hook(ticks, **kwargs):
     def hook(plot, element):
         plot.handles["axis"].get_xaxis().set_ticklabels(ticks, **kwargs)
@@ -174,6 +195,10 @@ def no_yticks_hook(plot, element):
 def hide_minor_ticks_hook(plot, element):
     ax = plot.handles["axis"]
     ax.get_xaxis().set_minor_formatter(mpl.ticker.NullFormatter())
+def set_minor_xticks_formatter(formatter):
+    def hook(plot, element):
+        plot.handles["axis"].get_xaxis().set_minor_formatter(formatter)
+    return hook
 
 def despine_hook(plot, element, **kwargs):
     """Apply seaborn.despine. Matplotlib hook."""
@@ -211,6 +236,7 @@ def xlabel_shift_hook(yshift=1, xshift=0):
         label.set_transform(label.get_transform() + shift)
     return hook
 
+# + tags=[]
 def ylabel_shift_hook(xshift=1.5, yshift=0):
     def hook(plot, element):
         ax = plot.handles["axis"]
@@ -219,6 +245,44 @@ def ylabel_shift_hook(xshift=1.5, yshift=0):
         label = ax.yaxis.label
         label.set_transform(label.get_transform() + shift)
     return hook
+
+# + [markdown] tags=[]
+# ## Plotting functions
+
+# + [markdown] tags=[]
+# ### `plot_param_space`
+# Visualize a collection of parameters.
+# Collection is packaged as a `ParamColl` instance, which defines certain parameters as random: by sampling these parameters, the new parameter sets can be created on demand.
+# (This is similar to the [parameter space](https://pythonhosted.org/NeuroTools/parameters.html#the-parameterspace-class) idea of NeuroTools, which is now largely abandoned.)
+# This function takes a `ParamColl` instance, samples all random parameters, and returns a `HoloMap` which can be used to visualize them.
+#
+# :::{note}
+#
+# `plot_param_space` is not currently used, but may still be useful as a generic function for other projects
+# :::
+
+# + [markdown] tags=[]
+#     def _plot_param_hist_dict(Θcoll: ParamColl, θdim="param"):
+#         rv_params = [name for name, val in Θcoll.items() if isinstance(val, ExpandableRV)]
+#         kdims = {name: Θcoll.dims.get(name, name) for name in rv_params}
+#         kdims = {name: dim if isinstance(dim, hv.Dimension) else hv.Dimension(name, label=dim) for name, dim in kdims.items()}
+#         pdims = {name: hv.Dimension(f"p{name}", label=f"p({kdims[name].label})") for name in rv_params}
+#         hists = {name: hv.Histogram(np.histogram(Θcoll[name].rvs(1000), bins="auto", density=True),
+#                                     kdims=kdims[name], vdims=pdims[name])
+#                  for name in rv_params}
+#         # Augment with histograms from nested ParamColls
+#         nested_paramcolls = [(name, val) for name, val in Θcoll.items() if isinstance(val, ParamColl)]
+#         for name, paramcoll in nested_paramcolls:
+#             new_hists = {f"{name}.{pname}": phist
+#                          for pname, phist in _plot_param_hist_dict(paramcoll, θdim).items()}
+#             hists = {**hists, **new_hists}
+#         return hists
+
+# + [markdown] tags=[]
+#     def plot_param_space(Θcoll: ParamColl, θdim="param"):
+#         hists = _plot_param_hist_dict(Θcoll, θdim)
+#         return hv.HoloMap(hists, kdims=[θdim]).layout().cols(3)
+# -
 
 # ## Format numbers
 
@@ -437,103 +501,36 @@ def formatted_quantity(qty, uncertainty=None, precision=None) -> dict[str,str]:
 # + [markdown] tags=[]
 # ### Test
 
-# + tags=[]
-if __name__ == "__main__":
-    assert format_scientific(0.9999999999999716) == "1.00"
-    assert format_scientific(1.0000000000000284) == "1.00"
-    assert format_scientific(9999.999999999716) == "1.00×10⁴"
-    assert format_scientific(1000.0000000000284) == "1.00×10³"
-    assert format_scientific(5.34) == "5.34"
-    assert format_scientific(32175254) == "3.22×10⁷"
-    assert format_scientific(0.000002789) == "2.79×10⁻⁶"
-    assert format_scientific(0.000002781) == "2.78×10⁻⁶"
-    
-    assert format_scientific(0.9999999999999716, sig_digits=1) == "1"
-    assert format_scientific(5.34, sig_digits=1) == "5"
-    assert format_scientific(5.74, sig_digits=1) == "6"
-    assert format_scientific(0.534, sig_digits=1) == "5×10⁻¹"
-    assert format_scientific(0.000002781, sig_digits=1) == "3×10⁻⁶"
-
-    assert format_scientific(0) == "0.00"
-
-    assert format_scientific(-0.9999999999999716) == "-1.00"
-    assert format_scientific(-1.0000000000000284) == "-1.00"
-    assert format_scientific(-9999.999999999716) == "-1.00×10⁴"
-    assert format_scientific(-1000.0000000000284) == "-1.00×10³"
-    assert format_scientific(-5.34) == "-5.34"
-    assert format_scientific(-32175254) == "-3.22×10⁷"
-    assert format_scientific(-0.000002789) == "-2.79×10⁻⁶"
-    assert format_scientific(-0.000002781) == "-2.78×10⁻⁶"
-
-    assert format_scientific(-0.9999999999999716, sig_digits=1) == "-1"
-    assert format_scientific(-5.34, sig_digits=1) == "-5"
-    assert format_scientific(-5.74, sig_digits=1) == "-6"
-    assert format_scientific(-0.534, sig_digits=1) == "-5×10⁻¹"
-    assert format_scientific(-0.000002781, sig_digits=1) == "-3×10⁻⁶"
-# + [markdown] tags=[]
-# ## Plotting functions
-# -
-
-# ### `plot_param_space`
-
-# def _plot_param_hist_dict(Θcoll: ParamColl, θdim="param"):
-#     rv_params = [name for name, val in Θcoll.items() if isinstance(val, ExpandableRV)]
-#     kdims = {name: Θcoll.dims.get(name, name) for name in rv_params}
-#     kdims = {name: dim if isinstance(dim, hv.Dimension) else hv.Dimension(name, label=dim) for name, dim in kdims.items()}
-#     pdims = {name: hv.Dimension(f"p{name}", label=f"p({kdims[name].label})") for name in rv_params}
-#     hists = {name: hv.Histogram(np.histogram(Θcoll[name].rvs(1000), bins="auto", density=True),
-#                                 kdims=kdims[name], vdims=pdims[name])
-#              for name in rv_params}
-#     # Augment with histograms from nested ParamColls
-#     nested_paramcolls = [(name, val) for name, val in Θcoll.items() if isinstance(val, ParamColl)]
-#     for name, paramcoll in nested_paramcolls:
-#         new_hists = {f"{name}.{pname}": phist
-#                      for pname, phist in _plot_param_hist_dict(paramcoll, θdim).items()}
-#         hists = {**hists, **new_hists}
-#     return hists
-
-# def plot_param_space(Θcoll: ParamColl, θdim="param"):
-#     hists = _plot_param_hist_dict(Θcoll, θdim)
-#     return hv.HoloMap(hists, kdims=[θdim]).layout().cols(3)
-
-# def plot_voltage_traces(res: "DataFrame", varname="V",
-#                         pop_labels=None, colors=hv.Cycle("Dark2").values,
-#                         backend="matplotlib"):
-#     #init_run = model.integrate_warm_init()
-#     pop_names = res.V.columns.get_level_values("pop")
-#     if pop_labels is None:
-#         pop_labels = pop_names
-#     traces = getattr(res, varname).loc[:,[(pop_name,1) for pop_name in pop_names]]
-#     traces = traces.droplevel("index", axis="columns")  # Now that we have one neuron per pop, we don’t need the index
-
-#     hv.output(backend=backend)  # Workaround: If we set the desired backend as default, the curve colours are ignored
-#     fig = hv.Overlay([hv.Curve(traces, kdims="time", vdims=pop_name, label=pop_label).redim(**{pop_name: varname})
-#                      for pop_name, pop_label in zip(pop_names, pop_labels)]) \
-#          .redim(time=dims[backend].t)
-#          #.opts(ylabel=dims.bokeh.V.label)
-#     # Assign trace colours
-#     assert len(pop_labels) <= len(colors), "There are fewer colors than population labels."
-#     for pop_label, c in zip(pop_labels, colors):
-#         fig.opts(hv.opts.Curve(f"Curve.{hv.core.util.sanitize_identifier_fn(pop_label)}", color=c))
-#     fig.opts(hv.opts.Curve(width=800, backend="bokeh"),
-#              hv.opts.Overlay(width=800, backend="bokeh"),
-#              hv.opts.Overlay(legend_position="right")
-#             )
-#     #fig.cols(1)
-#     return fig
-
-# # ### `get_bounds`
-
-# def get_bounds(*arrs, lower_margin=0.05, upper_margin=0.05) -> Tuple[float, float]:
-#     """
-#     Return bounds that include all values of the given arrays, plus a little more.
-#     How much more is determined by the margins; 0.05 increases the range
-#     by about 5%.
-#     Intended for recomputing the bounds in figures.
-
-#     Returns a tuple of ``(low, high)`` bounds.
-#     """
-#     low = min(arr.min() for arr in arrs); high = max(arr.max() for arr in arrs)
-#     width = high-low
-#     return (low-lower_margin*width, high+upper_margin*width)
-
+# + tags=["active-ipynb"]
+# if __name__ == "__main__":
+#     assert format_scientific(0.9999999999999716) == "1.00"
+#     assert format_scientific(1.0000000000000284) == "1.00"
+#     assert format_scientific(9999.999999999716) == "1.00×10⁴"
+#     assert format_scientific(1000.0000000000284) == "1.00×10³"
+#     assert format_scientific(5.34) == "5.34"
+#     assert format_scientific(32175254) == "3.22×10⁷"
+#     assert format_scientific(0.000002789) == "2.79×10⁻⁶"
+#     assert format_scientific(0.000002781) == "2.78×10⁻⁶"
+#     
+#     assert format_scientific(0.9999999999999716, sig_digits=1) == "1"
+#     assert format_scientific(5.34, sig_digits=1) == "5"
+#     assert format_scientific(5.74, sig_digits=1) == "6"
+#     assert format_scientific(0.534, sig_digits=1) == "5×10⁻¹"
+#     assert format_scientific(0.000002781, sig_digits=1) == "3×10⁻⁶"
+#
+#     assert format_scientific(0) == "0.00"
+#
+#     assert format_scientific(-0.9999999999999716) == "-1.00"
+#     assert format_scientific(-1.0000000000000284) == "-1.00"
+#     assert format_scientific(-9999.999999999716) == "-1.00×10⁴"
+#     assert format_scientific(-1000.0000000000284) == "-1.00×10³"
+#     assert format_scientific(-5.34) == "-5.34"
+#     assert format_scientific(-32175254) == "-3.22×10⁷"
+#     assert format_scientific(-0.000002789) == "-2.79×10⁻⁶"
+#     assert format_scientific(-0.000002781) == "-2.78×10⁻⁶"
+#
+#     assert format_scientific(-0.9999999999999716, sig_digits=1) == "-1"
+#     assert format_scientific(-5.34, sig_digits=1) == "-5"
+#     assert format_scientific(-5.74, sig_digits=1) == "-6"
+#     assert format_scientific(-0.534, sig_digits=1) == "-5×10⁻¹"
+#     assert format_scientific(-0.000002781, sig_digits=1) == "-3×10⁻⁶"
