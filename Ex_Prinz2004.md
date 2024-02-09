@@ -942,10 +942,11 @@ tags: [active-ipynb, remove-cell]
 ---
 xarr = np.linspace(-6, 6)
 yarr = stats.norm.logpdf(xarr, loc=-2, scale=1.5)/2 + stats.cauchy.logpdf(xarr, loc=3, scale=0.05)/2
-curve = hv.Curve(zip(xarr, yarr), kdims=["θ"], vdims=["log likelihood"])
+θdim = hv.Dimension("θ", label="$\\theta$")
+curve = hv.Curve(zip(xarr, yarr), kdims=[θdim], vdims=["log likelihood"])
 curve.opts(hooks=[viz.no_yticks_hook, viz.despine_hook, viz.no_spine_hook("left")],
            backend="matplotlib")
-_kdims = ["θ", "log likelihood"]
+_kdims = [θdim, "log likelihood"]
 θmax=2.96; θrobust=-1  # Obtained by inspecting xarr and np.diff(yarr)
 fig = hv.VLine(θrobust, kdims=_kdims) * hv.VLine(θmax, kdims=_kdims) * curve
 fig.opts(hv.opts.VLine(color="#BBBBBB", linestyle="dashed", linewidth=1.5))
@@ -1091,7 +1092,7 @@ All this to say that in the vast majority of cases, we expect that the most conv
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
-In order to create a set of risk samples for each candidate model, we define for each a generative model which includes the expected noise (in this case additive Gaussian noise with parameter $σ$ fitted above). For each model, we then generate a **synthetic** dataset, evaluate the risk $q$ at every data point, and get a distribution for $q$. We represent this distribution by its quantile function, a.k.a. percent point function (PPF).
+In order to create a set of risk samples for each candidate model, we define for each a generative model which includes the expected noise (in this case additive Gaussian noise with parameter $σ$ fitted above). For each model, we then generate a **synthetic** dataset, evaluate the risk $q$ at every data point, and get a distribution for $q$. We represent this distribution by its quantile function, a.k.a. point probability function (PPF).
 
 :::{hint}
 :class: margin
@@ -1860,6 +1861,8 @@ tags: [active-ipynb, skip-execution]
             task.save(taskfilename)
 ```
 
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
 ### Analysis
 
 ```{code-cell} ipython3
@@ -1873,24 +1876,34 @@ from Ex_Prinz2004 import *
 hv.extension("matplotlib", "bokeh")
 ```
 
-+++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell", "active-ipynb"]}
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
-    # Workaround to be able run notebook while a new calibration is running:
-    # Use the last finished task
-    from smttask.view import RecordStoreView
-    rsview = RecordStoreView()
-    rsview.list
-    task = emd.tasks.Calibrate.from_desc(rsview.last.parameters)
-    #task = emd.tasks.Calibrate.from_desc(rsview.get('20231017-222339_1c9062').parameters)
-    #task = emd.tasks.Calibrate.from_desc(rsview.get('20231024-000624_baf0b3').parameters)
+:::{dropdown} Workaround to be able run notebook while a new calibration is running
+```python
+# Workaround to be able run notebook while a new calibration is running:
+# Use the last finished task
+from smttask.view import RecordStoreView
+rsview = RecordStoreView()
+rsview.list
+task = emd.tasks.Calibrate.from_desc(rsview.last.parameters)
+#task = emd.tasks.Calibrate.from_desc(rsview.get('20231017-222339_1c9062').parameters)
+#task = emd.tasks.Calibrate.from_desc(rsview.get('20231024-000624_baf0b3').parameters)
+```
+:::
 
-+++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["active-ipynb", "remove-cell"]}
-
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [active-ipynb, remove-cell]
+---
     task = tasks['C vs D', 'Gaussian', 'low noise', 'short input correlations', 'weak input']
 
     assert all(task.has_run for task in tasks.values()), "Run the calibrations from the command line environment, using `smttask run`. Executing it as part of a Jupyter Book build would take a **long** time."
 
     calib_results = task.unpack_results(task.run())
+```
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
@@ -2012,7 +2025,8 @@ def panel_calib_curve(task, c_list: list[float]) -> hv.Overlay:
     
     for c in c_list:
         α = 1 #if c == c_chosen else 0.85
-        w = 3 if c == c_chosen else 2
+        #w = 3 if c == c_chosen else 2
+        w = 2
         calib_curves[c].opts(alpha=α, linewidth=w)
     
     curve_panel = prohibited_areas * discouraged_areas * hv.Overlay(calib_curves.select(c=c_list).values())
@@ -2152,13 +2166,14 @@ slideshow:
 tags: [active-ipynb]
 ---
 panels = [panel_calib_curve(task, c_list) for task in tasks_to_show]
-panels[0].opts(title=r"$\mathcal{{M}}_C$ vs $\mathcal{{M}}_D$")
-panels[2].opts(title=r"$\mathcal{{M}}_A$ vs $\mathcal{{M}}_B$")
-panels[4].opts(title=r"$\mathcal{{M}}_A$ vs $\mathcal{{M}}_D$")
+panels[0].opts(title="$\\mathcal{{M}}_C$ vs $\\mathcal{{M}}_D$")
+panels[2].opts(title="$\\mathcal{{M}}_A$ vs $\\mathcal{{M}}_B$")
+panels[4].opts(title="$\\mathcal{{M}}_A$ vs $\\mathcal{{M}}_D$")
 panels[0].opts(ylabel=r"weak $I_{\mathrm{ext}}$")
 panels[1].opts(ylabel=r"strong $I_{\mathrm{ext}}$")
-panels[0].opts(hv.opts.Overlay(legend_cols=5, legend_position="top_left",
-                               ))
+panels[0].opts(hv.opts.Overlay(legend_cols=5, legend_position="top_left", # Two placement options    
+                                legend_opts={"columnspacing": 2.}))
+panels[4].opts(hv.opts.Overlay(legend_cols=1, legend_position="right"))    # for the shared legend
 for i in (1, 2, 3, 4, 5):
     panels[i].opts(hv.opts.Overlay(show_legend=False))
 for i in (0, 1, 2, 4, 5):
@@ -2181,8 +2196,8 @@ fig_calibs = hv.Layout(panels)
 fig_calibs.opts(
     hv.opts.Layout(backend="matplotlib", sublabel_format="", #sublabel_format="({alpha})",
                    transpose=True,
-                   fig_inches=1/4*2*config.figures.defaults.fig_inches,  # Each panel is 1/4 of full width
-                   hspace=-0.1
+                   fig_inches=0.3*2*config.figures.defaults.fig_inches,  # Each panel is 1/3-ε of full width
+                   hspace=-0.15, vspace=0.2, tight=False
                   )
 ).cols(2)
 hv.output(fig_calibs)
@@ -2213,11 +2228,12 @@ viz.save(fig_calibs, config.paths.figures/"prinz_calibrations_raw.svg")
 Finalized with Inkscape:
 - Put the curves corresponding to `c_chosen` on top. Highlight curve with white surround (2x curve width).
 - Move legend above plots
-- Add the model comparison distributions (below)
+- ~~Add the model comparison distributions (below)~~
+- Save to PDF
 
-+++
++++ {"editable": true, "slideshow": {"slide_type": ""}}
 
-#### Calibration figure: Appendix
+#### Calibration figure: Supplementary
 
 ```{code-cell} ipython3
 ---
@@ -2655,7 +2671,10 @@ Rdists = [hv.Distribution(_Rlst, kdims=[dims.R], label=f"Model {a}")
           for a, _Rlst in R_samples.items()]
 Rcurves = [hv.operation.stats.univariate_kde(dist).to.curve()
            for dist in Rdists]
-fig = hv.Overlay(Rdists) * hv.Overlay(Rcurves)
+fig_Rdists = hv.Overlay(Rdists) * hv.Overlay(Rcurves)
+
+xticks = [round(R,1) for R in np.arange(3, 5, 0.1) if (low:=fig_Rdists.range("R")[0]) < R < (high:=fig_Rdists.range("R")[1])]
+xticklabels = [str(R) if R in (4.0, 4.6) else "" for R in xticks]
 ```
 
 ```{code-cell} ipython3
@@ -2666,16 +2685,81 @@ slideshow:
 tags: [hide-input, active-ipynb]
 ---
 # Plot styling
-fig.opts(
+yticks = [0, 2, 4, 6]
+fig_Rdists.opts(
     hv.opts.Distribution(alpha=.3),
     hv.opts.Distribution(facecolor=colors.LP_candidates, color="none", edgecolor="none", backend="matplotlib"),
     hv.opts.Curve(color=colors.LP_candidates),
     hv.opts.Curve(linestyle="solid", backend="matplotlib"),
-    hv.opts.Overlay(fontscale=1.3, hooks=[viz.despine_hook], backend="matplotlib",
-                    legend_position="top", legend_cols=2,
-                    show_legend=True,
-                    fig_inches=1/4*2*config.figures.defaults.fig_inches)  # 1/4 full width
+    hv.opts.Overlay(backend="matplotlib", fontscale=1.3,
+                    hooks=[viz.set_xticks_hook(xticks), viz.set_xticklabels_hook(xticklabels),
+                           viz.set_yticks_hook(yticks), viz.despine_hook],
+                    legend_position="top_left", legend_cols=1,
+                    show_legend=False,
+                    xlim=fig_Rdists.range("R"),  # Redundant, but ensures range is not changed
+                    #fig_inches=config.figures.defaults.fig_inches)  # Previously: was 1/3 full width
+                    aspect=3
+                   )
 )
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [active-ipynb, hide-input]
+---
+Rmeans = hv.Spikes([(Rlst.mean(), 2, a) for a, Rlst in R_samples.items()],
+                     kdims=dims.R, vdims=["height", "model"], group="back")
+# Display options
+dashstyles = {"A": (0, (4, 4)), "B": (4, (4, 4)),
+              "C": (0, (3.5, 4.5)), "D": (4, (3.5, 4.5))}
+model_colors = {a: c for a, c in zip("ABCD", colors.LP_candidates.values)}
+
+# Because the C and D models are so close, the lines are very difficult to differentiate
+# To make this easier, we overlay with interleaved dashed lines.
+# NB: Key to making this visually appealing is that we leave a gap between
+#     the dash segments
+Rmeans_front = hv.Overlay([
+    hv.Spikes([(R, h, a)], kdims=Rmeans.kdims, vdims=Rmeans.vdims,
+              group="front", label=f"Model {a}")
+    .opts(backend="matplotlib", linestyle=dashstyles[a])
+    for R, h, a in Rmeans.data.values])
+# NB: Current versions don’t seem to include Spikes in the legend.
+#     Moreover, the shifted dash style means that for B and D the line is not printed in the legend
+legend_proxies = hv.Overlay([hv.Curve([(R, 0, a)], group="proxy", label=f"Model {a}")
+                             for R, h, a in Rmeans.data.values])
+fig_Rmeans = Rmeans * Rmeans_front * legend_proxies
+
+fig_Rmeans.opts(
+    hv.opts.Spikes(color=hv.dim("model", lambda alst: np.array([model_colors[a] for a in alst]))),
+    hv.opts.Spikes("back", alpha=0.2),
+    hv.opts.Spikes(backend="matplotlib", linewidth=2, hooks=[viz.yaxis_off_hook]),
+    hv.opts.Overlay(backend="matplotlib",
+                    show_legend=True, legend_position="bottom_left",
+                    xticks=xticks,
+                    hooks=[viz.set_xticklabels_hook(""), viz.despine_hook(0), viz.yaxis_off_hook],
+                    xlim=fig_Rdists.range("R"),
+                    aspect=6)
+)
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [active-ipynb, hide-input]
+---
+# Why aren’t the fontsizes consistent across panels ? No idea...
+fig = (fig_Rmeans.opts(fontscale=1.3, sublabel_position=(-.25, .4), show_legend=False, xlabel="")
+       + fig_Rdists.opts(sublabel_position=(-.25, .9), show_legend=True))
+fig.opts(shared_axes=True, tight=False, aspect_weight=True,
+         sublabel_format="", sublabel_size=12,
+         vspace=0.1,
+         fig_inches=config.figures.defaults.fig_inches)
+fig.cols(1)
 ```
 
 ```{code-cell} ipython3
@@ -2686,8 +2770,38 @@ slideshow:
 tags: [remove-cell, active-ipynb]
 ---
 viz.save(fig, config.paths.figures/f"prinz_Rdists_raw.svg")
-#viz.save(fig.opts(fig_inches=5.5, backend="matplotlib", clone=True),
-#              config.paths.figures/f"prinz_Rdists.svg")
+```
+
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+Things to finish in Inkscape:
+- ~~Fix alignment of sublabels~~
+- ~~Make sublabels bold~~
+- Trim unfinished dashes lines in the R means
+- Extend lines for R means into lower panel
+- Make alignment of x axes pixel perfect
+- Tighten placement of xlabel
+- Save to PDF
+
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
+
+Bigger version; appropriate for HTML or slides.
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [active-ipynb, remove-cell]
+---
+fig2 = (fig_Rmeans.opts(clone=True, fontscale=2, show_legend=False, sublabel_position=(-.215, .4))
+                  .opts(hv.opts.Spikes(linewidth=4))
+       + fig_Rdists.opts(clone=True, fontscale=2, show_legend=True, sublabel_position=(-.25, .9)))
+fig2.opts(shared_axes=True, tight=False, aspect_weight=True,
+          sublabel_format="", sublabel_size=18,
+          fig_inches=5.5)
+viz.save(fig2, config.paths.figures/f"prinz_Rdists_big.svg")
+fig2.cols(1)
 ```
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
