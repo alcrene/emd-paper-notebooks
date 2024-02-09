@@ -9,12 +9,20 @@ font.size: 11
   # xx-small, x-small, small, medium, large, x-large, xx-large, larger, smaller
 
 # dark-text options
-text.color: 333333
+text.color: "#333333"
 
 # Transparent backgrounds
-axes.facecolor : FFFFFF00
-savefig.facecolor : FFFFFF00
-patch.facecolor: FFFFFF00
+axes.facecolor : "#FFFFFF00"
+savefig.facecolor : "#FFFFFF00"
+patch.facecolor: "#FFFFFF00"
+
+# Make the plot axes less salient vis-à-vis their content
+axes.edgecolor: 0.30
+axes.labelcolor: 0.30
+xtick.color: 0.30
+ytick.color: 0.30
+xtick.labelcolor: 0.30
+ytick.labelcolor: 0.30
 
 #mathtext.fontset : cm
 axes.titlepad : 14.0
@@ -30,7 +38,7 @@ legend.handlelength: 1.4   # In font-size units; default: 2.0
 legend.handletextpad: 0.5  # In font-size units; default: 0.8
 legend.borderaxespad: 0.5  # Default: 0.5
 legend.borderpad: 0.4      # Default: 0.4
-legend.edgecolor: FFFFFF00  # Remove legend border
+legend.edgecolor: "#FFFFFF00"  # Remove legend border
 
 lines.markersize: 4
 

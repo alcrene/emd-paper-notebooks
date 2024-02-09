@@ -92,7 +92,7 @@ dims = Dict(
         V  = hv.Dimension("V", unit=r"$\mathrm{mV}$"),
         logL = hv.Dimension("logL", label="log likelihood"),
         Φ  = hv.Dimension("Φ", label=r"cum. prob. ($\Phi$)"),
-        q  = hv.Dimension("q", label="quantile ($q$)"),
+        q  = hv.Dimension("q", label="loss ($q$)"),
         Bemd = hv.Dimension("Bemd", label=r"$B^{\mathrm{EMD}}$"),
         Bconf = hv.Dimension("Bconf", label=r"$B^{\mathrm{conf}}$"),
         c = hv.Dimension("c", label="$c$"),
@@ -109,7 +109,7 @@ dims = Dict(
         V  = hv.Dimension("V", unit="mV"),
         logL = hv.Dimension("logL", label="log likelihood"),
         Φ  = hv.Dimension("Φ", label="cum. prob. (Φ)"),
-        q  = hv.Dimension("q", label="quantile (q)"),
+        q  = hv.Dimension("q", label="loss (q)"),
         Bemd = hv.Dimension("Bemd"),
         Bconf = hv.Dimension("Bconf"),
         c = hv.Dimension("c"),
@@ -200,9 +200,15 @@ def set_minor_xticks_formatter(formatter):
         plot.handles["axis"].get_xaxis().set_minor_formatter(formatter)
     return hook
 
-def despine_hook(plot, element, **kwargs):
-    """Apply seaborn.despine. Matplotlib hook."""
-    sns.despine(ax=plot.handles["axis"], **{"trim":True, "offset":5, **kwargs})
+def despine_hook(offset=5, trim=True):
+    def hook(plot, element, offset=offset, trim=trim, **kwargs):
+        """Apply seaborn.despine. Matplotlib hook."""
+        sns.despine(ax=plot.handles["axis"], **{"trim":trim, "offset":offset, **kwargs})
+    if isinstance(offset, hv.plotting.Plot):
+        # Not calling the function is equivalent to passing default args: offset, trim -> plot, element
+        return hook(plot=offset, element=trim, offset=5, trim=True)
+    else:
+        return hook
 
 def set_xlabel_hook(*args, **kwds):
     """Call `set_xlabel` with the provided arguments."""
