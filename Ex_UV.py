@@ -1246,15 +1246,15 @@ class EpistemicDist(emd.tasks.EpistemicDist):
 # %% editable=true slideshow={"slide_type": ""}
 N = 1024
 Ωdct = {"infrared": EpistemicDist(),
-        "microwave": EpistemicDist(λmin_range   = (20, 1000) * μm,
-                                   λwidth_range = (1000, 3000) * μm)
+        "microwave": EpistemicDist(λmin_range   = (20, 500) * μm,
+                                   λwidth_range = (200, 500) * μm)
        }
 
 # %% editable=true slideshow={"slide_type": ""}
 tasks = {}
 for Ωkey, Ω in Ωdct.items():
     task = emd.tasks.Calibrate(
-        reason = f"UV calibration – RJ vs Planck – Gaussian obs. model",
+        reason = f"UV calibration – RJ vs Planck – {Ωkey} – Gaussian obs. model",
         #c_list = [.5, 1, 2],
         #c_list = [2**-8, 2**-7, 2**-6, 2**-5, 2**-4, 2**-3, 2**-2, 2**-1, 2**0],
         #c_list = [2**-8, 2**-6, 2**-4, 2**-2, 1],
@@ -1309,10 +1309,19 @@ for Ωkey, Ω in Ωdct.items():
 #     del params.inputs["models_Qs"]
 # task = emd.tasks.Calibrate.from_desc(params)
 # ```
+# :::
+
+# %% [markdown]
+# Select which of the epistemic distributions we want the calibration plots for.
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
-# task = tasks["infrared"]
+# Ωkey = "infrared"
+# #key = "microwave"
+
+# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
+# task = tasks[Ωkey]
 # assert task.has_run, "Run the calibration from the command line environment, using `smttask run`. Executing it as part of a Jupyter Book build would take a **long** time."
+# Ωdesc = f"N={task.experiments.N}_{Ωkey}"
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
 # calib_results = task.unpack_results(task.run())
@@ -1414,7 +1423,7 @@ c_list = [2**-4, 2**-2, 2**-1, 2**0, 2**1, 2**3]
 # for c, curve in calib_curves.items():
 #     calib_curves[c] = curve.relabel(label=f"$c={viz.format_pow2(c, format='latex')}$")
 #
-# for c in c_list:
+# for c in c_list:  # We highlight the curve for the chosen c by making the line wider
 #     α = 1 #if c == c_chosen else 0.85
 #     w = 3 if c == c_chosen else 2
 #     calib_curves[c].opts(alpha=α, linewidth=w)
@@ -1458,13 +1467,9 @@ c_list = [2**-4, 2**-2, 2**-1, 2**0, 2**1, 2**3]
 # fig.opts(backend="matplotlib", fig_inches=5)
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-cell"]
-# Ω = task.experiments
-# desc = f"N={Ω.N}"
-# viz.save(fig, config.paths.figures/f"uv_calibration_{desc}_raw.svg")
+# viz.save(fig, config.paths.figures/f"uv_calibration_{Ωdesc}_raw.svg")
 # # viz.save(fig.opts(fig_inches=5.5, backend="matplotlib"),
 # #                   config.paths.figures/f"uv_calibration_{desc}.svg")
-#
-# f"uv_calibration_{desc}"
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # Finalized with Inkscape:
@@ -1513,9 +1518,9 @@ c_list = [2**-4, 2**-2, 2**-1, 2**0, 2**1, 2**3]
 # fig.opts(clone=True, backend="matplotlib", fig_inches=5)
 
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-cell", "active-ipynb"]
-# viz.save(fig, config.paths.figures/f"uv_Rdists.pdf")
+# viz.save(fig, config.paths.figures/f"uv_Rdists_{Ωdesc}.pdf")
 # viz.save(fig.opts(fig_inches=5.5, backend="matplotlib", clone=True),
-#               config.paths.figures/f"uv_Rdists.svg")
+#               config.paths.figures/f"uv_Rdists_{Ωdesc}.svg")
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # EMD estimates for the probabilities $P(R_a < R_b)$ are best reported as a table:
@@ -1773,9 +1778,9 @@ def panel_param_iterator(L=L_small, purpose="data", progbar=True):
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-input"]
 # Rdist_layout.opts(fig_inches=3, clone=True)
 
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
-# viz.save(data_layout, config.paths.figures/"uv_dataset-grid.svg")
-# viz.save(Rdist_layout, config.paths.figures/"uv_Rdist-grid.svg")
+# %% editable=true slideshow={"slide_type": ""} tags=["remove-cell", "active-ipynb"]
+# viz.save(data_layout, config.paths.figures/f"uv_dataset-grid_{Ωdesc}.svg")
+# viz.save(Rdist_layout, config.paths.figures/f"uv_Rdist-grid_{Ωdesc}.svg")
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # (For insertion into the manuscript, these two figures should be combined into one wide figure with Inkscape and saved as *uv_dataset-and-Rdist-grids* (both as *Optimized SVG* and *PDF*).
@@ -1798,6 +1803,9 @@ def panel_param_iterator(L=L_small, purpose="data", progbar=True):
 #     task_args.Ldata.add(task.Ldata)
 #     task_args.Linf.add(task.Linf)
 # assert len(task_args.Ldata) == len(task_args.Linf) == 1
+
+# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
+# Ω = task.experiments
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-cell"]
 # glue("uv_c_chosen", f"${viz.format_pow2(c_chosen, 'latex')}$")
