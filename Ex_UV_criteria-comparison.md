@@ -22,6 +22,8 @@ math:
     '\Bemd' : 'B_{#1}^{\mathrm{EMD}}'
     '\Bconf': 'B^{\mathrm{conf}}_{#1}'
     '\Bspec': '\mathcal{B}'
+    '\EE'   : '\mathbb{E}'
+    '\VV'   : '\mathbb{V}'
     '\eE'   : '\mathcal{E}'
     '\logL' : '\mathcal{l}'
     '\nN'   : '\mathcal{N}'
@@ -111,7 +113,7 @@ L_list = [L_small, L_med, L_large]
 Lᑊ = 2**12
 s_list = 2.**array([12, 16, 20]) * Bunits**-1  # data_noise_s is about 2**16.5
 
-table_λwindow1 = (20*μm, 4000*μm)
+table_λwindow1 = (20*μm, 1000*μm)
 table_λwindow2 = (data_λ_min, data_λ_max)
 table_T    = data_T
 table_B0   = data_B0/8
@@ -121,6 +123,32 @@ dataset_list = [Dataset("Criterion comparison", L, λmin, λmax, s, T=table_T, B
                 for L in L_list
                 for (λmin, λmax) in [table_λwindow1, table_λwindow2]
                 for B0 in (table_B0, 0*Bunits)]
+```
+
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+To provide a reference, we compute for each dataset the ratio between the variance (controlled by $s$) and the maximum value of the radiance. This gives a sense of how the noise compares with the scale of the data.
+
+The variance is actually $λ$-dependent; to give a single value, we average the expression for the variance given in the paper over $λ$:
+
+$$\text{noise sd} = \sqrt{ \EE_λ \Bigl[ \VV\bigl[\Bspec(λ;T)\bigr]\Bigr]} = \sqrt{\EE_λ \left[ \frac{\Bspec_{\mathrm{P}}(λ;T)}{s}  \right]} $$
+
+We compare this against $\max_λ\Bigl(\Bspec_{\mathrm{P}}(λ;T)\Bigr) = \Bspec_{\mathrm{P}}(λ_{min};T) + \Bspec_0$:
+
+$$\text{noise fraction} := \frac{\text{noise sd}}{\max_λ\Bigl(\Bspec_{\mathrm{P}}(λ;T)\Bigr)} $$
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+---
+noise_fraction = {}
+for 𝒟 in dataset_list:
+    λ, B = 𝒟.get_data()
+    Ba = 𝒟.data_model[1](𝒟.L)[1]
+    noise_sd = np.sqrt((Ba/𝒟.s).mean())
+    noise_fraction[𝒟.B0, 𝒟.s] = noise_sd / (Ba+𝒟.B0).max()
 ```
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
@@ -181,10 +209,12 @@ slideshow:
 ---
 @memory.cache
 def Bemd(𝒟):
+    #c = 2**-1 if 𝒟.λmax == 30*μm else 2**0
+    c = c_chosen
     _mixed_ppf, _synth_ppf = get_ppfs(𝒟)
     _Bemd = emd.Bemd(_mixed_ppf["Planck"], _mixed_ppf["Rayleigh-Jeans"],
                      _synth_ppf["Planck"], _synth_ppf["Rayleigh-Jeans"],
-                     c=c_chosen, res=8, M=128,
+                     c=c, res=8, M=128,
                      progbarA=None, progbarB=None)
     return Criterion(log(_Bemd), log(1-_Bemd))
 ```
@@ -549,7 +579,7 @@ editable: true
 slideshow:
   slide_type: ''
 ---
-df = pd.DataFrame({(f"{𝒟.λmin.m}–{𝒟.λmax.m}", 𝒟.L, 𝒟.B0.m, 𝒟.s.m):
+df = pd.DataFrame({(f"{𝒟.λmin.m}–{𝒟.λmax.m}", 𝒟.L, 𝒟.B0.m, 𝒟.s.m, noise_fraction[𝒟.B0, 𝒟.s].m):
                    {r"$\underline{B}^{\mathrm{EMD}}_{\mathrm{P,RJ}}$": Bemd(𝒟).logratio,
                     r"$B^R_{\mathrm{P,RJ}}$": BR(𝒟).logratio,
                     r"$B^l_{\mathrm{P,RJ}}$": Bl(𝒟).logratio,
@@ -559,7 +589,7 @@ df = pd.DataFrame({(f"{𝒟.λmin.m}–{𝒟.λmax.m}", 𝒟.L, 𝒟.B0.m, 𝒟.
                     #r"$B^{\mathrm{elpd}}_{\mathrm{P,RJ};π_2}$": Belpd(𝒟, π2logσ, π2logT).logratio,
                     }
                    for 𝒟 in tqdm(dataset_list)})
-df.columns.names=["λ", "L", "B0", "s"]
+df.columns.names=["λ", "L", "B0", "s", "rel. σ"]
 df.index.name = "Criterion"
 
 df = df.stack(["λ", "L"])
@@ -572,7 +602,6 @@ df = df.sort_index(axis="columns", ascending=[False, True])
 editable: true
 slideshow:
   slide_type: ''
-tags: [remove-cell]
 ---
 # Undo the sorting along λ, so the longer wavelengths case comes first (same order as the figure)
 _index = []
@@ -639,11 +668,10 @@ The colour scheme was picked to saturate at ratios of 30:1, which is around wher
 editable: true
 slideshow:
   slide_type: ''
-tags: [hide-input]
 ---
 df = df \
     .rename_axis(["Criterion", r"$λ (\mathrm{μm})$", "$L$"], axis="index") \
-    .rename_axis(["", "$s^{-1}$"], axis="columns")
+    .rename_axis(["", "$s$", "rel. $σ$"], axis="columns")
 # Common options
 df_styled_html = df.copy().style \
     .background_gradient(table_cmap, axis=0, vmin=-1.5, vmax=+1.5)  # log₁₀ 30 ≈ 1.47
@@ -652,7 +680,8 @@ df_styled_latex = df.copy().style \
 # HTML options
 df_styled_html = df_styled_html \
     .format_index(lambda L: viz.format_pow2(L), axis="index", level=2, escape="latex") \
-    .format_index(lambda s: viz.format_pow2(s**-1), axis="columns", level=1, escape="html") \
+    .format_index(lambda s: viz.format_pow2(s), axis="columns", level=1, escape="html") \
+    .format_index(lambda nf: f"{nf*100:2.0f}%", axis="columns", level=2) \
     .format_index(lambda B0: "$\mathcal{B}_0 > 0$" if B0>0 else "$\mathcal{B}_0 = 0$", axis="columns", level=0, escape=None) \
     .format(partial(format_B_value, format="unicode")) \
     .set_table_styles([{"selector": "td", "props": "padding: 0.5em;"},
@@ -665,7 +694,6 @@ df_styled_html
 editable: true
 slideshow:
   slide_type: ''
-tags: [remove-cell]
 ---
 label = "tbl_uv_criteria-comparison"
 short_caption = "Comparison of different model selection criteria."
@@ -677,8 +705,12 @@ Rayleigh-Jeans model ($\MRJ$) and are evaluated for different dataset sizes
 ($L$), different levels of noise ($s$) and different wavelength windows ($λ$); $L$, $s$ and $λ$ values were chosen to span the
 transition from weak/ambiguous evidence for either $\MP$ or $\MRJ$,
 to reasonably strong evidence for $\MP$.
+To give a better sense of scale, the noise level is reported in two ways: $s$ is the actual value used to
+generate the data,
+while "rel.\ $σ$" reports the resulting standard deviation as a fraction of the maximum radiance within
+the data window.
 The 15 to 30 $\mathrm{\mu m}$ window for $λ$ corresponds to the data that shown in \@cref{fig_UV_setup},
-while the 20 to 4000 $\mathrm{\mu m}$ window stretches further into the microwave range, where the two models are nearly indistinguishable.
+while the {{λmicrowave_low}} to {{λmicrowave_high}} $\mathrm{\mu m}$ window stretches further into the microwave range, where the two models are nearly indistinguishable.
 As in \@cref{fig_uv-example_r-distributions}, we perform calculations under both positive
 and null bias conditions (resp.\ ($\mathcal{B}_0 > 0$ and $\mathcal{B}_0 = 0$);
 the former emulates a situation where neither model can fit the data perfectly.
@@ -688,8 +720,12 @@ Positive (negative) values indicate evidence in favour of the Planck (Rayleigh-J
 for example, a value of -1 is interpreted as $\MP$ being 10 times less likely than $\MRJ$,
 while a value of +2 would suggest that $\MP$ is 100 times \emph{more} likely than $\MRJ$.
 Expressions for all criteria are given in \@cref{app_expressions-other-criteria}.
+For the $\underline{B}^{\mathrm{EMD}}_{\mathrm{P,RJ}}$ criteria, we used $c={{c_chosen}}$.
 Note that especially for small $L$, some values are sensitive to the random seed used to generate the data.
-""".replace("@", "")
+""".replace("@", "") \
+.replace("{{λmicrowave_low}}", str(table_λwindow1[0].m)) \
+.replace("{{λmicrowave_high}}", str(table_λwindow1[1].m)) \
+.replace("{{c_chosen}}", str(c_chosen))
 ```
 
 ```{code-cell} ipython3
@@ -747,8 +783,10 @@ tags: [remove-cell]
 (df_styled_latex
     .format_index(lambda B0: "$\mathcal{B}_0 > 0$" if B0>0 else "$\mathcal{B}_0 = 0$",
                   escape=None, axis="columns", level=0)
-    .format_index(lambda s: viz.format_pow2(s**-1, format='$latex$'),
+    .format_index(lambda s: viz.format_pow2(s, format='$latex$'),
                   escape="latex", axis="columns", level=1)
+    .format_index(lambda nf: f"{nf*100:2.0f}\%",
+                  escape="latex", axis="columns", level=2) \
     .format_index(lambda L: viz.format_pow2(L, format='$latex$'),
                   escape="latex", axis="index", level=2) \
     .format_index(escape=None, axis="index")
@@ -800,7 +838,6 @@ These can be inserted into other pages.
 editable: true
 slideshow:
   slide_type: ''
-tags: [remove-cell]
 ---
 glue("c_chosen", f"${viz.format_pow2(c_chosen, 'latex')}$", display=True)
 
