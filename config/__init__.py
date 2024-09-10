@@ -30,6 +30,10 @@ try:
 except ImportError:
     pass
 
+# Put the results we actually used into a shareable/publishable folder
+import smttask
+smttask.config.track_folder = "data/tracked_tasks"
+
 class Config(ValConfig):
     __default_config_path__: ClassVar = "defaults.cfg"
     __local_config_filename__ = "local.cfg"

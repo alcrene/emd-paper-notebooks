@@ -171,7 +171,44 @@ def skip_cache(__skipcache_cmp__=None, **__skipcache_kwds__):
         return wrapper
     return decorator
 
+import os
+from joblib import memory, func_inspect
+from joblib import Parallel, delayed, Memory
+class NotebookMemory(Memory):
+    """
+    Hack to ensure portable cache names with joblib.Memory
+    See https://github.com/joblib/joblib/issues/1312#issuecomment-1514965330
+    Changes:
+    1. We try to make the path portable, by replacing the home dir part of the path with 'HOME'
+    2. In a similar vein, we remove `__main__` from the name, since we don’t want to
+       differentiate between code executed from the main or an imported module.
+    3. Instead we append a user-specified string  (Which is used instead of the 
+       "<ipython-input>" suggested in the GitHub issue). We do this because 
+       a) we also run this from CLI, where we don’t use IPython
+       b) the suggestion in the GitHub issue only uses the notebook’s directory to
+          differentiate clashes, which is prone to collisions
+    """
+    def __init__(self, *args, cache_name: str, **kwargs):
+        super(NotebookMemory, self).__init__(*args, **kwargs)
+        self.cache_name = cache_name
+        self._func_inspect_get_func_name = func_inspect.get_func_name
+        self._memory_get_func_name = func_inspect.get_func_name
+        func_inspect.get_func_name = self._get_func_name
+        memory.get_func_name = self._get_func_name
 
+    def _get_func_name(self, f, resolv_alias=False, win_characters=False):
+        cwd = os.getcwd()
+        homedir = os.path.expanduser("~")
+        if cwd.startswith(homedir):
+            cwd = "HOME" + cwd.removeprefix(homedir)
+        cwd = cwd.replace(os.sep, '-')
+        return ([f"{cwd}-<{self.cache_name}>"], f.__name__)
+
+    def __del__(self):
+        func_inspect.get_func_name = self._func_inspect_get_func_name
+        memory.get_func_name = self._memory_get_func_name
+
+NotebookMemory.__doc__ += "\n------- Original Memory docstring ---------\n\n" + Memory.__doc__
 
 
 @dataclass(frozen=True)  # Allows hashing the resulting model
@@ -220,7 +257,7 @@ class compose:
             x = f(x, **kwds)
         return x
 
-## Random number generation ##
+# # Random number generation ##
 
 # Project-specific mother seed: All RNGs in this project are seeded with this number
 entropy = 231868418911922305076391806541830040449

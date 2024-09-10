@@ -258,18 +258,18 @@ colors.limit_cycles(4)
 # :::
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
+# ::::{margin}
 # :::{note}
-# :class: margin
 #     
 # Memoizing the model with an LRU cache avoids it being be re-integrated every time.
 # (However it is still re-integrated if we change the time steps ``x``.)
 # :::
 #
 # :::{note}
-# :class: margin
 #
 # In theory data and candidate models can also be defined using only plain functions, but classes make it easier to control how the model is pickled. (Pickling is used to send data to multiprocessing subthreads.)
 # :::
+# ::::
 
 # %% editable=true slideshow={"slide_type": ""}
 @dataclass(frozen=True)
@@ -486,11 +486,12 @@ class AdditiveNoise:
 # Within the `Calibrate` task, each data model is shipped to an MP subprocess with pickle: by making `Dataset` callable, we can ship the `Dataset` instance (which only needs to serialize a seed) instead of the `utils.compose` instance (which would serialize an RNG)
 # :::
 #
+# ::::{margin}
 # :::{hint}
-# :class: margin
 #
 # `utils.compose(g, f)` works like $g \circ f$.
 # :::
+# ::::
 
 # %% editable=true slideshow={"slide_type": ""}
 @dataclass(frozen=True)
@@ -528,6 +529,7 @@ class Dataset:
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
+# (code_prinz-example-traces)=
 # ### Example traces
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -778,11 +780,12 @@ class Q:
 # :::
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
+# ::::{margin}
 # :::{hint}
-# :class: margin
 #
 # Fitting $\log σ$ is justified on ontological grounds: it is a positive quantities, and we are fitting its *scale* as much as we are its precise value. Fitting the logarithm is hugely beneficial for numerical stability.
 # :::
+# ::::
 
 # %% editable=true slideshow={"slide_type": ""}
 @lru_cache(maxsize=16)  # Don’t make this too large: each entry in the cache keeps a reference to `dataset` and `phys_model`, each of which maintains a largish cach, preventing it from being being deleted
@@ -802,6 +805,12 @@ def fit_gaussian_σ(dataset: Dataset, phys_model: str|CandidateModel, obs_model:
     assert res.success
     return 2**res.x * mV
 
+
+# %% [markdown] editable=true slideshow={"slide_type": ""}
+# :::{margin}
+# This block  is only executed in the notebook because it otherwise it makes `import` statements heavy.
+# So the `candidate_models` and `Qrisk` variables are not available to code which imports this module.
+# :::
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
 # candidate_models = Dict()
@@ -832,16 +841,17 @@ def fit_gaussian_σ(dataset: Dataset, phys_model: str|CandidateModel, obs_model:
 #
 # A physicist may be willing to make simplifying assumptions, but at that point we might as well use the approximate expression we get by estimating the PPF from samples.
 #
-# All this to say that in the vast majority of cases, we expect that the most convenient and most accurate way to estimate the PPF will be to generate a set of samples and use `make_empirical_risk_ppf`
+# All this to say that in the vast majority of cases, we expect that the most convenient and most accurate way to estimate the PPF will be to generate a set of samples and use `make_empirical_risk_ppf`.
 # :::
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # In order to create a set of risk samples for each candidate model, we define for each a generative model which includes the expected noise (in this case additive Gaussian noise with parameter $σ$ fitted above). For each model, we then generate a **synthetic** dataset, evaluate the risk $q$ at every data point, and get a distribution for $q$. We represent this distribution by its quantile function, a.k.a. point probability function (PPF).
 #
+# ::::{margin}
 # :::{hint}
-# :class: margin
 # Note how we use different random seeds for each candidate model to avoid accidental correlations.
 # :::
+# ::::
 
 # %% editable=true slideshow={"slide_type": ""}
 def generate_synth_samples(model: CandidateModel, L_synth: int=L_synth,
@@ -1008,12 +1018,6 @@ def generate_synth_samples(model: CandidateModel, L_synth: int=L_synth,
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # Calibration is a way to test that $\Bemd{AB;c}$ actually does provide a bound on the probability that $R_A < R_B$, where the probability is over a variety of experimental conditions.
 #
-# :::{admonition} TODO
-# :class: warning
-#
-# - Update with comment that we target the A vs B (and C vs D ?) conditions because they are the most ambiguous.
-# - Update calibration dist whith what we actually used.
-# :::
 # There is no unique distribution over experimental conditions, so what we do is define many such distributions; we refer to these as *epistemic distributions*. Since calibration results depend on the model, we repeat the calibration for different pairs $(a,b)$ of candidate models – of the six possible pairs, we select three: $(A,B)$, $(A,C)$ and $(C,D)$.
 # :::{margin}
 # (We could of course test every candidate model pair, but increasing the number of experiments per pair is a better use of our computation budget.)
@@ -1094,7 +1098,7 @@ def generate_synth_samples(model: CandidateModel, L_synth: int=L_synth,
 # - *Short correlations*: 
 #   $\log_{10} τ \sim \Unif([{glue:raw}`../notebooks/Ex_Prinz2004.ipynb::tau_short_min:`, {glue:raw}`../notebooks/Ex_Prinz2004.ipynb::tau_short_max:`])$
 # - *Long correlation*: 
-#   $\log_{10} τ \sim \Unif([{glue:raw}`../notebooks/Ex_Prinz2004.ipynb::tau_long_max:`, {glue:raw}`../notebooks/Ex_Prinz2004.ipynb::tau_long_max:`])$
+#   $\log_{10} τ \sim \Unif([{glue:raw}`../notebooks/Ex_Prinz2004.ipynb::tau_long_min:`, {glue:raw}`../notebooks/Ex_Prinz2004.ipynb::tau_long_max:`])$
 # :::
 #
 # ::::
@@ -1103,8 +1107,8 @@ def generate_synth_samples(model: CandidateModel, L_synth: int=L_synth,
 # We like to avoid Gaussian distributions for calibration, because often Gaussian are “too nice”, and may hide or suppress rare behaviours. (For example, neural network weights are often not initialized with Gaussians: distributions with heavier tails tend to produce more exploitable initial features.) Uniform distributions are convenient because they can produce extreme values with high probability, without also producing unphysically extreme values. This is of course only a choice, and in many cases a Gaussian calibration distribution can also be justified.
 
 # %% [markdown]
+# ::::{margin}
 # :::{hint} 
-# :class: margin
 #
 # The only requirement for the `Experiment` container is that it define:
 #
@@ -1114,8 +1118,9 @@ def generate_synth_samples(model: CandidateModel, L_synth: int=L_synth,
 # - `QA`
 # - `QB`
 #
-# In simple cases (see [UV example](./Ex_UV.ipynb)) the container provided by suffices `emd.tasks.Experiment`. In other cases, it can be beneficial to define our own container: for example, here it allows us to wrap the computationally expensive call to `fit_gaussian_σ` with a `cached_property`, which will only be called from within the child MP process. Otherwise this would have to be done in the main process, and would become a bottleneck and memory hog.
+# In simple cases (see [UV example](./Ex_UV.ipynb)) the container provided by  `emd.tasks.Experiment` suffices. In other cases, it can be beneficial to define our own container: for example, here it allows us to wrap the computationally expensive call to `fit_gaussian_σ` with a `cached_property`, which will only be called from within the child MP process. Otherwise this would have to be done in the main process, and would become a bottleneck and memory hog.
 # :::
+# ::::
 
 # %% editable=true raw_mimetype="" slideshow={"slide_type": ""}
 @dataclass(frozen=True)  # NB: Does not prevent use of @cached_property
@@ -1162,9 +1167,9 @@ class Experiment:        #     See https://docs.python.org/3/faq/programming.htm
 
 
 # %% [markdown]
-# :::{hint}
-# :class: margin
+# ::::{margin}
 #
+# :::{hint}
 # A calibration distribution type doesn’t need to subclass `emd.tasks.EpistemicDist`, but it should be a dataclass satisfying the following:
 #
 # - Iterating over it yields data models.
@@ -1174,13 +1179,12 @@ class Experiment:        #     See https://docs.python.org/3/faq/programming.htm
 #
 # To view these requirements in IPython or Jupyter, along with sample code, type `emd.tasks.EpistemicDist??`.
 # :::
-
-# %% [markdown]
-# :::{hint}
-# :class: margin
 #
+# :::{hint}
 # Specifying hyperparameters as class attributes with defaults ensures that a) we can change them more easily, and more importantly b) if we change the defaults, runs with the old default will (correctly) be recomputed.
 # :::
+#
+# ::::
 
 # %% editable=true raw_mimetype="" slideshow={"slide_type": ""} tags=["active-py"]
 @dataclass(frozen=True)  # frozen allows dataclass to be hashed
@@ -1488,7 +1492,7 @@ for Ωkey, Ω in Ωdct.items():
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "skip-execution"]
 #     for key, task in tasks.items():
-#         if True or not task.has_run:  # Don’t create task files for tasks which have already run
+#         if not task.has_run:  # Don’t create task files for tasks which have already run
 #             Ω = task.experiments
 #             taskfilename = f"prinz_calibration__{Ω.a}vs{Ω.b}_{Ω.ξ_name}_{Ω.σo_dist}_{Ω.τ_dist}_{Ω.σi_dist}_N={Ω.N}_c={task.c_list}"
 #             task.save(taskfilename)
@@ -1584,7 +1588,7 @@ def panel_calib_hist(task, c_list: list[float]) -> hv.Overlay:
                         legend_cols=3,
                         legend_opts={"columnspacing": .5, "alignment": "center",
                                      "loc": "upper center"},
-                        hooks=[viz.yaxis_off_hook, partial(viz.despine_hook, left=True)]),
+                        hooks=[viz.yaxis_off_hook, partial(viz.despine_hook(), left=True)]),
         hv.opts.Overlay(backend="bokeh",
                         legend_cols=3),
         hv.opts.Overlay(backend="matplotlib",
@@ -1715,6 +1719,7 @@ def panel_calib_curve(task, c_list: list[float]) -> hv.Overlay:
 # :::
 
 # %% [markdown]
+# (code_prinz-calib-main-text)=
 # #### Calibration figure: main text
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "hide-input"]
@@ -1760,8 +1765,8 @@ def panel_calib_curve(task, c_list: list[float]) -> hv.Overlay:
 # fig_calibs.opts(
 #     hv.opts.Layout(backend="matplotlib", sublabel_format="", #sublabel_format="({alpha})",
 #                    transpose=True,
-#                    fig_inches=0.3*2*config.figures.defaults.fig_inches,  # Each panel is 1/3-ε of full width
-#                    hspace=-0.15, vspace=0.2, tight=False
+#                    fig_inches=0.4*config.figures.defaults.fig_inches,  # Each panel is 1/3 of column width. Natural width of plot is a bit more; we let LaTeX scale the image down a bit (otherwise we would need to tweak multiple values like font scales & panel spacings)
+#                    hspace=-0.25, vspace=0.2, tight=False
 #                   )
 # ).cols(2)
 # hv.output(fig_calibs)
@@ -1781,9 +1786,8 @@ def panel_calib_curve(task, c_list: list[float]) -> hv.Overlay:
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # Finalized with Inkscape:
-# - Put the curves corresponding to `c_chosen` on top. Highlight curve with white surround (2x curve width).
+# - Put the curves corresponding to `c_chosen` on top. Highlight curve with white surround (~2x curve width).
 # - Move legend above plots
-# - ~~Add the model comparison distributions (below)~~
 # - Save to PDF
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -2049,6 +2053,7 @@ def get_color(a):
 # :::
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
+# (code_prinz-model-comparison)=
 # ## EMD model comparison
 #
 # Based on the calibration results, we choose the value $c=${glue:text}`c_chosen_prinz` (set above) to compute the $\Bemd{}$ criterion between models.
@@ -2076,40 +2081,57 @@ def get_color(a):
 #     D = emd.draw_R_samples(mixed_ppf.D, synth_ppf.D, c=c_chosen)
 # )
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""}
 # Convert the samples into a distributions using a kernel density estimate (KDE).
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
-# Rdists = [hv.Distribution(_Rlst, kdims=[dims.R], label=f"Model {a}")
-#           for a, _Rlst in R_samples.items()]
-# Rcurves = [hv.operation.stats.univariate_kde(dist).to.curve()
-#            for dist in Rdists]
-# fig_Rdists = hv.Overlay(Rdists) * hv.Overlay(Rcurves)
-#
-# xticks = [round(R,1) for R in np.arange(3, 5, 0.1) if (low:=fig_Rdists.range("R")[0]) < R < (high:=fig_Rdists.range("R")[1])]
-# xticklabels = [str(R) if R in (4.0, 4.6) else "" for R in xticks]
-
-# %% editable=true slideshow={"slide_type": ""} tags=["hide-input", "active-ipynb"]
-# # Plot styling
-# yticks = [0, 2, 4, 6]
-# fig_Rdists.opts(
-#     hv.opts.Distribution(alpha=.3),
-#     hv.opts.Distribution(facecolor=colors.LP_candidates, color="none", edgecolor="none", backend="matplotlib"),
-#     hv.opts.Curve(color=colors.LP_candidates),
-#     hv.opts.Curve(linestyle="solid", backend="matplotlib"),
-#     hv.opts.Overlay(backend="matplotlib", fontscale=1.3,
-#                     hooks=[viz.set_xticks_hook(xticks), viz.set_xticklabels_hook(xticklabels),
-#                            viz.set_yticks_hook(yticks), viz.despine_hook],
-#                     legend_position="top_left", legend_cols=1,
-#                     show_legend=False,
-#                     xlim=fig_Rdists.range("R"),  # Redundant, but ensures range is not changed
-#                     #fig_inches=config.figures.defaults.fig_inches)  # Previously: was 1/3 full width
-#                     aspect=3
-#                    )
+# xticks = [3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7]
+# fig_Rdists = viz.make_Rdist_fig(
+#     R_samples,
+#     colors     =colors.LP_candidates,
+#     xticks     =xticks,
+#     xticklabels=["", "", "4.0", "" ,"", "", "", "", "4.6", ""],
+#     yticks     =[0, 2, 4, 6],
+#     yticklabels=["0", "", "", "6"],
 # )
+# fig_Rdists
+
+# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-cell"]
+#     Rdists = [hv.Distribution(_Rlst, kdims=[dims.R], label=f"Model {a}")
+#               for a, _Rlst in R_samples.items()]
+#     Rcurves = [hv.operation.stats.univariate_kde(dist).to.curve()
+#                for dist in Rdists]
+#     fig_Rdists = hv.Overlay(Rdists) * hv.Overlay(Rcurves)
+#     
+#     xticks = [round(R,1) for R in np.arange(3, 5, 0.1) if (low:=fig_Rdists.range("R")[0]) < R < (high:=fig_Rdists.range("R")[1])]
+#     xticklabels = [str(R) if R in (4.0, 4.6) else "" for R in xticks]
+
+# %% editable=true slideshow={"slide_type": ""} tags=["hide-input", "active-ipynb", "remove-cell"]
+#     # Plot styling
+#     yticks = [0, 2, 4, 6]
+#     yticklabels = ["0", "", "", "6"]
+#     fig_Rdists.opts(
+#         hv.opts.Distribution(alpha=.3),
+#         hv.opts.Distribution(facecolor=colors.LP_candidates, color="none", edgecolor="none", backend="matplotlib"),
+#         hv.opts.Curve(color=colors.LP_candidates),
+#         hv.opts.Curve(linestyle="solid", backend="matplotlib"),
+#         hv.opts.Overlay(backend="matplotlib", fontscale=1.3,
+#                         hooks=[viz.set_xticks_hook(xticks), viz.set_xticklabels_hook(xticklabels), viz.ylabel_shift_hook(5),
+#                                viz.set_yticks_hook(yticks), viz.set_yticklabels_hook(yticklabels), viz.xlabel_shift_hook(7),
+#                                viz.despine_hook(2)],
+#                         legend_position="top_left", legend_cols=1,
+#                         show_legend=False,
+#                         xlim=fig_Rdists.range("R"),  # Redundant, but ensures range is not changed
+#                         #fig_inches=config.figures.defaults.fig_inches)  # Previously: was 1/3 full width
+#                         aspect=3
+#                        )
+#     )
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "hide-input"]
-# Rmeans = hv.Spikes([(Rlst.mean(), 2, a) for a, Rlst in R_samples.items()],
+# # First line: means of the R f
+# # Second line: expected risk computed on the original data
+# #Rmeans = hv.Spikes([(Rlst.mean(), 2, a) for a, Rlst in R_samples.items()],
+# Rmeans = hv.Spikes([(Qrisk[a](LP_data.get_data()).mean(), 2, a) for a in R_samples.keys()],
 #                      kdims=dims.R, vdims=["height", "model"], group="back")
 # # Display options
 # dashstyles = {"A": (0, (4, 4)), "B": (4, (4, 4)),
@@ -2133,7 +2155,7 @@ def get_color(a):
 #
 # fig_Rmeans.opts(
 #     hv.opts.Spikes(color=hv.dim("model", lambda alst: np.array([model_colors[a] for a in alst]))),
-#     hv.opts.Spikes("back", alpha=0.2),
+#     hv.opts.Spikes("back", alpha=0.5),
 #     hv.opts.Spikes(backend="matplotlib", linewidth=2, hooks=[viz.yaxis_off_hook]),
 #     hv.opts.Overlay(backend="matplotlib",
 #                     show_legend=True, legend_position="bottom_left",
@@ -2160,21 +2182,32 @@ def get_color(a):
 # Things to finish in Inkscape:
 # - ~~Fix alignment of sublabels~~
 # - ~~Make sublabels bold~~
-# - Trim unfinished dashes lines in the R means
+# - Trim unfinished dashed lines in the R means
 # - Extend lines for R means into lower panel
-# - Make alignment of x axes pixel perfect
-# - Tighten placement of xlabel
+# - Confirm that alignment of x axes pixel perfect
+# - ~~Tighten placement of xlabel~~
 # - Save to PDF
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
 # Bigger version; appropriate for HTML or slides.
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-cell"]
+# vlines = hv.Overlay([hv.VLine(R).opts(color=model_colors[a])
+#                      for R, _, a in fig_Rmeans.data['Back', 'I'].data.values])
 # fig2 = (fig_Rmeans.opts(clone=True, fontscale=2, show_legend=False, sublabel_position=(-.215, .4))
 #                   .opts(hv.opts.Spikes(linewidth=4))
-#        + fig_Rdists.opts(clone=True, fontscale=2, show_legend=True, sublabel_position=(-.25, .9)))
+#        + (vlines*fig_Rdists).opts(clone=True, fontscale=2, show_legend=True, sublabel_position=(-.25, .9))
+#                             .opts(hv.opts.VLine(linewidth=4, alpha=0.5)))
+# fig2[1].opts(fig_Rdists.opts.get())
+# fig2[1].opts(show_legend=False)
+# fig2[0].opts(show_legend=True)
+# fig2[0].opts(backend="matplotlib", legend_position='top_left',
+#              legend_opts={'framealpha': 1, 'borderpad': 1,
+#                           'labelspacing': .5,
+#                           'bbox_to_anchor': (-.02, 1)})  # NB: 'loc' is ignored; use legend_position
 # fig2.opts(shared_axes=True, tight=False, aspect_weight=True,
 #           sublabel_format="", sublabel_size=18,
+#           vspace=0,  # For some reason, negative vspace doesn’t work
 #           fig_inches=5.5)
 # viz.save(fig2, config.paths.figures/f"prinz_Rdists_big.svg")
 # fig2.cols(1)
@@ -2236,9 +2269,6 @@ def get_color(a):
 # ## Exported notebook variables
 #
 # These can be inserted into other pages.
-
-# %%
-raw_html=viz.format_pow2(c_chosen, format='unicode')
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-cell"]
 # glue("AB_model", AB_model_label, display=True)

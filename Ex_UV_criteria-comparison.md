@@ -162,14 +162,21 @@ For comparability, we write all criteria as ratios of probabilities, so a criter
 > Model $A$ is $B^C_{AB}$ times more probable than model $B$.
 
 where $C$ can be “model evidence”, “relative likelihood”, etc. Thus, if $P(A)$ is the “probability of model $A$ and $P(B)$ the “probability of model $B$, then a criterion corresponds to
-$$B^C_{AB} = \frac{P(A)}{P(B)} \qquad \leftrightarrow \qquad \log B^C_{AB} = \log P(A) - \log P(B) \,.$$
+$$B^C_{AB} = \frac{P(A)}{P(B)} \qquad \leftrightarrow \qquad \log B^C_{AB} = \log P(A) - \log P(B) \,.$$  (eq_conceptual-probability-ratio)
+
++++
+
+:::{margin}
+`Criterion` class takes two arguments – `lognum` and `logdenom` –  which correspond respectively to $\log P(A)$ and $\log P(B)$ in {eq}`eq_conceptual-probability-ratio`.
+__Values must be provided in base $e$.__ (I.e. we assume natural logarithms.)
+A `Criterion` object has two attributes, `ratio` and `logratio`, the latter of which is __in base 10__.
+:::
 
 ```{code-cell} ipython3
 ---
 editable: true
 slideshow:
   slide_type: ''
-tags: [remove-cell]
 ---
 @dataclasses.dataclass
 class Criterion:
@@ -314,7 +321,7 @@ def R(a,𝒟):
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
 $\eE$: Model evidence
-~ The Bayesian model evidence is obtained by integerating the posterior. For this we need to set priors on the parameters $T$ and $σ$; a common practice is to use “uninformative priors”, to “let the data speak”.{cite:p}`gelmanHolesBayesianStatistics2021` (In other words, we choose broad priors which let the posterior concentrate near the likelihood.) For this example we use the following priors:
+~ The Bayesian model evidence is obtained by integerating the posterior. For this we need to set priors on the parameters $T$ and $σ$; a common practice is to use “uninformative priors”, to “let the data speak” {cite:p}`gelmanHolesBayesianStatistics2021`. (In other words, we choose broad priors which let the posterior concentrate near the likelihood.) For this example we use the following priors:
   $$\begin{aligned}
     π\Bigl(\log \frac{σ}{[σ]}\Big) &\sim \Unif(\log 2^9, \log 2^{14})   &&\quad& π_2\Bigl(\log \frac{σ}{[σ]}\Big) &\sim \Unif(\log 2^9, \log 2^{10})\\
     π\Bigl(\log \frac{T}{[T]}\Bigr) &\sim \Unif(\log 1000, \log 5000) &&\quad& π_2\Bigl(\log \frac{T}{[T]}\Bigr) &\sim \Unif(\log 3900, \log 4100)\\
@@ -378,13 +385,13 @@ slideshow:
   The evidence in this example is therefore computed with a double integral, which can be done directly with `scipy.dblquad` if $L$ is small. When $L$ is large however, the probability is too small and we run into numerical underflow; in that case we can resort to evaluating the integral by generating a large number $M$ of prior samples:
   $$\begin{aligned}
   \eE_a &\approx \sum_j p(\{λ_i, \Bspec_i\}_{i=1}^L \mid a,  σ_j, T_j) \qquad\text{where}\quad (σ_j, T_j) \sim  π(σ) π(T) \,, \\
-  &\approx \left(\frac{1}{10}\right)^L \sum_j \exp\left[ \ll_a\Bigl(σ_j, T_j\Bigr) \right] \\
-  \log \eE_a &\approx -L\log10 + \log\left[ \sum_j \exp \biggl(\ll_a\Bigl(σ_j, T_j\Bigr) \biggr)\right] \,.
+  &\approx \left(\frac{1}{10}\right)^L \sum_j \exp\left[ \logL_a\Bigl(σ_j, T_j\Bigr) \right] \\
+  \log \eE_a &\approx -L\log10 + \log\left[ \sum_j \exp \biggl(\logL_a\Bigl(σ_j, T_j\Bigr) \biggr)\right] \,.
   \end{aligned}$$
 
 We can then replace the probabilities with their logs and use `logsumexp` to get
-$$\log \eE_a &\approx -L\log10 + \mathtt{scipy.special.logsumexp}\left(\ll_a^{(1)}, \ll_a^{(2)}, \dotsc \right)\mathtt{.mean()}\,,$$
-where $\ll_a^{(j)} = \ll_a(σ_j, T_j)$, $(σ_j, T_j) \sim  π(σ) π(T)$ and $j = 1, 2, \dotsc, L_{\eE}$.
+$$\log \eE_a \approx -L\log10 + \mathtt{scipy.special.logsumexp}\left(\logL_a^{(1)}, \logL_a^{(2)}, \dotsc \right)\mathtt{.mean()}\,,$$
+where $\logL_a^{(j)} = \logL_a(σ_j, T_j)$, $(σ_j, T_j) \sim  π(σ) π(T)$ and $j = 1, 2, \dotsc, L_{\eE}$.
 
 ```{code-cell} ipython3
 ---
@@ -404,7 +411,7 @@ def logℰ(a, 𝒟, πlogσ, πlogT):
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
 $\mathrm{elpd}$: Expected log pointwise predictive density, WAIC, LOO
-~ The expected log pointwise predictive density ($\mathrm{elpd}$) on unseen data is often considered a gold standard when it comes to comparing models. Directly estimating the elpd requires putting aside a large amount of data for testing, which is rarely feasible; hence approximations have been developed, like the widely applicable information criterion (WAIC) and leave-one-out (LOO) cross-validation.({cite:p}`vehtariPracticalBayesianModel2017`) In this example however we can generate data at will, so there is no need for approximations: we can compute the $\mathrm{elpd}$ directly.
+~ The expected log pointwise predictive density ($\mathrm{elpd}$) on unseen data is often considered a gold standard when it comes to comparing models. Directly estimating the elpd requires putting aside a large amount of data for testing, which is rarely feasible; hence approximations have been developed, like the widely applicable information criterion (WAIC) and leave-one-out (LOO) cross-validation {cite:p}`vehtariPracticalBayesianModel2017`. In this example however we can generate data at will, so there is no need for approximations: we can compute the $\mathrm{elpd}$ directly.
 
   In the following we use $λ_i$, $\Bspec_i$ to denote the original data points used to fit the model, and $λ_j'$, $\Bspec_j'$ (with $j \in \{1,\dotsc,L'\}$) to denote the *new* data points on which we evaluate the $\mathrm{elpd}$. The posterior over parameters is denoted $p^*(T, σ \mid \{λ_i, \Bspec_i\}_{i=1}^L\bigr)$.
   $$\begin{aligned}
@@ -417,33 +424,33 @@ $\mathrm{elpd}$: Expected log pointwise predictive density, WAIC, LOO
         \iint \!dTdσ\; p\bigl(λ_j, \Bspec_j' \mid T, σ, a\bigr) \, \frac{p\bigl(\{λ_i, \Bspec_i\} \mid T, σ, a \bigr)\, π(T)π(σ)}{\int \!dTdσ\; p\bigl(\{λ_i, \Bspec_i\} \mid T, σ, a \bigr)\, π(T)π(σ)}
         \right] \\
     &\approx \frac{1}{L'}\sum_{j=1}^{L'} \log \left[
-        \iint \!dTdσ\; p\bigl(λ_j, \Bspec_j' \mid T, σ, a\bigr) \, \frac{e^{\ll_a(σ, T)} \, π(λ)π(T)π(σ)}{\eE_a}
+        \iint \!dTdσ\; p\bigl(λ_j, \Bspec_j' \mid T, σ, a\bigr) \, \frac{e^{\logL_a(σ, T)} \, π(λ)π(T)π(σ)}{\eE_a}
         \right] \qquad \left(π(λ) \equiv \frac{1}{10}\right) \\
     &\approx \frac{1}{L'}\sum_{j=1}^{L'} \log \left[
-        \iint \!dTdσ\; p\bigl(λ_j, \Bspec_j' \mid T, σ, a\bigr) \, e^{\ll_a(σ, T)} \, π(T)π(σ)
+        \iint \!dTdσ\; p\bigl(λ_j, \Bspec_j' \mid T, σ, a\bigr) \, e^{\logL_a(σ, T)} \, π(T)π(σ)
         \right] - \log \eE_a - \log 10
   \end{aligned}$$
   The integrand involves only probabilities of single samples, and so can be computed directly with `scipy.dblquad`.
-
   :::{margin}
-  As it turns out, even though direct integration is feasible, it is still about 100x slower than averaging over samples and using `logaddexp`.
+  As it turns out, even though direct integration is feasible, it is still about 100x slower than averaging over samples and using `logsumexp`.
   :::
+  
   Since $π(T)$ and $π(σ)$ are uniform in log space, we can further simplify the integral by a change of variables:
 
   $$\begin{aligned}
   \mathrm{elpd}_a
     &\approx \frac{1}{L'}\sum_{j=1}^{L'} \log \Biggl[
-        \iint \!dTdσ\; \exp\Bigl( \underbrace{\log p\bigl(λ_j, \Bspec_j' \mid T, σ, a\bigr)}_{\eqqcolon\, -Q_a(λ_j, \Bspec_j; σ, T)} + \ll_a(σ, T) \Bigr) \, π(T)π(σ)
+        \iint \!dTdσ\; \exp\Bigl( \underbrace{\log p\bigl(λ_j, \Bspec_j' \mid T, σ, a\bigr)}_{\eqqcolon\, -Q_a(λ_j, \Bspec_j; σ, T)} + \logL_a(σ, T) \Bigr) \, π(T)π(σ)
         \Biggr] - \log \eE_a - \log 10 \\
     &\approx \frac{1}{L'}\sum_{j=1}^{L'} \log \Biggl[
-       \underbrace{π(\log T)}_{=(\log 5)^{-1}} \; \underbrace{π(\log σ)}_{=(\log 16)^{-1}} \; \int_{\log 1000}^{\log 5000}\mspace{-48mu} d(\log T) \int_{\log 2}^{\log 32}\mspace{-32mu} d(\log σ)\; \exp\Bigl( \ll_a(e^{\log σ}, e^{\log T}) - Q_a(λ_j, \Bspec_j; e^{\log σ}, e^{\log T})\Bigr)
+       \underbrace{π(\log T)}_{=(\log 5)^{-1}} \; \underbrace{π(\log σ)}_{=(\log 16)^{-1}} \; \int_{\log 1000}^{\log 5000}\mspace{-48mu} d(\log T) \int_{\log 2}^{\log 32}\mspace{-32mu} d(\log σ)\; \exp\Bigl( \logL_a(e^{\log σ}, e^{\log T}) - Q_a(λ_j, \Bspec_j; e^{\log σ}, e^{\log T})\Bigr)
         \Biggr] - \log \eE_a - \log 10 \\
     &\approx \frac{1}{L'}\sum_{j=1}^{L'} \log \Biggl[
-       \int_{\log 1000}^{\log 5000}\mspace{-48mu} d(\log T) \int_{\log 2}^{\log 32}\mspace{-32mu} d(\log σ)\; \underbrace{\exp\Bigl( \ll_a(e^{\log σ}, e^{\log T}) - Q_a(λ_j, \Bspec_j; e^{\log σ}, e^{\log T})\Bigr)}_{\eqqcolon h(\log σ, \log T)}
+       \int_{\log 1000}^{\log 5000}\mspace{-48mu} d(\log T) \int_{\log 2}^{\log 32}\mspace{-32mu} d(\log σ)\; \underbrace{\exp\Bigl( \logL_a(e^{\log σ}, e^{\log T}) - Q_a(λ_j, \Bspec_j; e^{\log σ}, e^{\log T})\Bigr)}_{\eqqcolon h(\log σ, \log T)}
         \Biggr] - \log \eE_a - \log 10 - \log\log 5 - \log \log 16
 \end{aligned}$$
 
-~ The $\mathrm{elpd}$ is closely related to the expected risk $R$; in fact, if we define $Q$ to be the log *posterior* instead of the log *likelihood*, it becomes equivalent.
+  The $\mathrm{elpd}$ is closely related to the expected risk $R$; in fact, if we define $Q$ to be the log *posterior* instead of the log *likelihood*, it becomes equivalent.
 
 ```{code-cell} ipython3
 ---
@@ -531,10 +538,10 @@ $B^{\mathrm{elpd}}$: $\mathrm{elpd}$ criterion
   &\quad \begin{aligned}
       \;+\, \frac{1}{L'}\sum_{j=1}^{L'} \Bigg\{
       &\log \left[
-      \iint \!dTdσ\; p\bigl(λ_j, \Bspec_j' \mid T, σ, a\bigr) \, \ll_a(σ, T) \, π(T)π(σ)
+      \iint \!dTdσ\; p\bigl(λ_j, \Bspec_j' \mid T, σ, a\bigr) \, \logL_a(σ, T) \, π(T)π(σ)
       \right] \\
       &- \log \left[
-       \iint \!dTdσ\; p\bigl(λ_j, \Bspec_j' \mid T, σ, a\bigr) \, \ll_a(σ, T) \, π(T)π(σ)
+       \iint \!dTdσ\; p\bigl(λ_j, \Bspec_j' \mid T, σ, a\bigr) \, \logL_a(σ, T) \, π(T)π(σ)
       \right] \Biggr\}
     \end{aligned}
   \end{aligned}$$
@@ -553,12 +560,12 @@ def Belpd(𝒟, πlogσ, πlogT): return Criterion(elpd("Planck", 𝒟, πlogσ,
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
-$B^R$: Ratio of expected risk
+$\underline{B}^R$: Ratio of expected risk
 ~ As with the $\mathrm{elpd}$, the expected risk is more commonly given directly. However since we chose $Q$ to be the negative log likelihood, it is reasonable to present it as a ratio to make it comparable with other criteria:
   :::{margin}
   Signs are flipped because our criteria are interpreted as ratios of probabilities (i.e. negative loss).
   :::
-  $$\log B^R = -R_{\mathrm{P}} + R_{\mathrm{RJ}}$$
+  $$\log \underline{B}^R = -R_{\mathrm{P}} + R_{\mathrm{RJ}}$$
 
 ```{code-cell} ipython3
 ---
@@ -571,6 +578,7 @@ def BR(𝒟): return Criterion(-R("Planck", 𝒟), -R("Rayleigh-Jeans", 𝒟))
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
+(code_uv-comparison-table)=
 ## Comparison table
 
 ```{code-cell} ipython3
@@ -581,7 +589,7 @@ slideshow:
 ---
 df = pd.DataFrame({(f"{𝒟.λmin.m}–{𝒟.λmax.m}", 𝒟.L, 𝒟.B0.m, 𝒟.s.m, noise_fraction[𝒟.B0, 𝒟.s].m):
                    {r"$\underline{B}^{\mathrm{EMD}}_{\mathrm{P,RJ}}$": Bemd(𝒟).logratio,
-                    r"$B^R_{\mathrm{P,RJ}}$": BR(𝒟).logratio,
+                    r"$\underline{B}^R_{\mathrm{P,RJ}}$": BR(𝒟).logratio,
                     r"$B^l_{\mathrm{P,RJ}}$": Bl(𝒟).logratio,
                     r"$B^{\mathrm{Bayes}}_{\mathrm{P,RJ};π}$": BBayes(𝒟, π1logσ, π1logT).logratio,
                     #r"$B^{\mathrm{Bayes}}_{\mathrm{P,RJ};π_2}$": BBayes(𝒟, π2logσ, π2logT).logratio,
@@ -668,6 +676,7 @@ The colour scheme was picked to saturate at ratios of 30:1, which is around wher
 editable: true
 slideshow:
   slide_type: ''
+tags: [remove-output]
 ---
 df = df \
     .rename_axis(["Criterion", r"$λ (\mathrm{μm})$", "$L$"], axis="index") \
@@ -689,6 +698,22 @@ df_styled_html = df_styled_html \
 df_styled_html
 ```
 
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
+
+The cell below is meant for Jupyter Book, which doesn’t render MathJax in tables.
+The `html_code` variable is also used below to create the HTML code which is inserted into the paper.
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [remove-input]
+---
+html_code = viz.jb_fixes.display_dataframe_with_math(df_styled_html)
+display(html_code)
+```
+
 ```{code-cell} ipython3
 ---
 editable: true
@@ -699,33 +724,36 @@ label = "tbl_uv_criteria-comparison"
 short_caption = "Comparison of different model selection criteria."
 # '@' is a hack to prevent our own preprocessors from substituting \cref with {numref}
 caption = r"""
-\textbf{Comparison of different model selection criteria} for variations of the dataset shown in
-\@cref{fig_UV_setup}. Criteria compare the Planck model ($\MP$) against the 
+\textbf{Comparison of different model selection criteria} for variations of the datasets shown in
+\@cref{fig_uv-example_r-distributions}. Criteria compare the Planck model ($\MP$) against the 
 Rayleigh-Jeans model ($\MRJ$) and are evaluated for different dataset sizes
-($L$), different levels of noise ($s$) and different wavelength windows ($λ$); $L$, $s$ and $λ$ values were chosen to span the
-transition from weak/ambiguous evidence for either $\MP$ or $\MRJ$,
-to reasonably strong evidence for $\MP$.
-To give a better sense of scale, the noise level is reported in two ways: $s$ is the actual value used to
+($L$), different levels of noise ($s$) and different wavelength windows ($λ$).
+To allow for comparisons, all criteria have been transformed into ratios of probabilities (see \@cref{eq_def_Bemd-BR-table__emd,eq_def_Bemd-BR-table__R}).
+\textbf{Values reported are the $\log_{10}$ of those ratios.}
+Positive (blue shaded) values indicate evidence in favour of the Planck model, while negative (red shaded) values indicate the converse.
+For example, a value of +1 is interpreted as $\MP$ being 10 times more likely than $\MRJ$,
+while a value of -2 would suggest that $\MP$ is 100 times \emph{less} likely than $\MRJ$.
+Noise levels are reported in two ways: $s$ is the actual value used to
 generate the data,
-while "rel.\ $σ$" reports the resulting standard deviation as a fraction of the maximum radiance within
+while "rel. $σ$" reports the resulting standard deviation as a fraction of the maximum radiance within
 the data window.
-The 15 to 30 $\mathrm{\mu m}$ window for $λ$ corresponds to the data that shown in \@cref{fig_UV_setup},
-while the {{λmicrowave_low}} to {{λmicrowave_high}} $\mathrm{\mu m}$ window stretches further into the microwave range, where the two models are nearly indistinguishable.
-As in \@cref{fig_uv-example_r-distributions}, we perform calculations under both positive
-and null bias conditions (resp.\ ($\mathcal{B}_0 > 0$ and $\mathcal{B}_0 = 0$);
+The \qtyrange{«λmicrowave_low»}{«λmicrowave_high»}{\um} window for $λ$ stretches into the far infrared range,
+where the two models are nearly indistinguishable;
+hence higher positive values are expected for zero bias, low noise, and the \qtyrange{«λinfrared_low»}{«λinfrared_high»}{\um} window.
+As in \@cref{fig_uv-example_r-distributions}, calculations were done for both positive
+and null bias conditions (resp. ($\mathcal{B}_0 > 0$ and $\mathcal{B}_0 = 0$);
 the former emulates a situation where neither model can fit the data perfectly.
-To allow for comparisons, all criteria are presented as $\log_{10}$ ratios of probabilities,
-even though for non-Bayesian criteria this is not the usual form.
-Positive (negative) values indicate evidence in favour of the Planck (Rayleigh-Jeans) model:
-for example, a value of -1 is interpreted as $\MP$ being 10 times less likely than $\MRJ$,
-while a value of +2 would suggest that $\MP$ is 100 times \emph{more} likely than $\MRJ$.
 Expressions for all criteria are given in \@cref{app_expressions-other-criteria}.
-For the $\underline{B}^{\mathrm{EMD}}_{\mathrm{P,RJ}}$ criteria, we used $c={{c_chosen}}$.
-Note that especially for small $L$, some values are sensitive to the random seed used to generate the data.
-""".replace("@", "") \
-.replace("{{λmicrowave_low}}", str(table_λwindow1[0].m)) \
-.replace("{{λmicrowave_high}}", str(table_λwindow1[1].m)) \
-.replace("{{c_chosen}}", str(c_chosen))
+For the $\underline{B}^{\mathrm{EMD}}_{\mathrm{P,RJ}}$ criteria, we used $c=\num{«c_chosen»}$.
+Although this is the same value as we used for neuron model, it was determined through a separate calibration with different epistemic distributions.
+""" \
+.replace("@", "") \
+.replace("«λmicrowave_low»", str(table_λwindow1[0].m)) \
+.replace("«λmicrowave_high»", str(table_λwindow1[1].m)) \
+.replace("«λinfrared_low»", str(table_λwindow2[0].m)) \
+.replace("«λinfrared_high»", str(table_λwindow2[1].m)) \
+.replace("«c_chosen»", str(c_chosen)) \
+.replace(r".\ ", ". ")
 ```
 
 ```{code-cell} ipython3
@@ -733,12 +761,24 @@ Note that especially for small $L$, some values are sensitive to the random seed
 editable: true
 slideshow:
   slide_type: ''
-tags: [remove-cell]
+tags: [hide-input]
 ---
 def tex2md(text):
-    text = re.sub(r"\\emph{([^}]*)}", r"*\1*", text)
-    text = re.sub(r"\\textbf{([^}]*)}", r"**\1**", text)
-    text = re.sub(r"\\cref{([^}]*)}", r"{numref}`\1`", text)
+    # Hacks
+    text = text.replace(r"\textbf{Values reported are the $\log_{10}$ of those ratios.}",
+                        r"__Values reported are the $\log_{10}$ of those ratios.__")
+    text = text.replace(r"\cref{eq_def_Bemd-BR-table__emd,eq_def_Bemd-BR-table__R}",
+                        r"{eq}`eq_def_Bemd-BR-table`")
+    # "Proper" (but buggy) substitutions
+    text = re.sub(r"\\emph{([^}]*?)}", r"_\1_", text)
+    text = re.sub(r"\\textbf{([^}]*?)}", r"__\1__", text)
+    text = re.sub(r"\\cref{([^},]+?),([^},]+?)}", r"{numref}`\1` and {numref}`\2`", text)
+    text = re.sub(r"\\cref{([^}]*?)}", r"{numref}`\1`", text)
+    text = re.sub(r"\\qtyrange{(\d*)}{(\d*)}{([^}]*)}", r"\1—\2&nbsp;$\\mathrm{\3}$", text)
+    text = re.sub(r"\\um", r"\\mu m", text)
+    text = re.sub(r"\\num{([^}]*?)}", r"\1", text)
+    text = text.replace("~", "&nbsp;")
+    text += "[[source]](#code_uv-comparison-table)"
     return text
 ```
 
@@ -757,7 +797,6 @@ slideshow:
 tags: [remove-cell]
 ---
 with open(config.paths.figures/"table_criterion_comparison.html", 'w') as f:
-    html_code = viz.jb_fixes.display_dataframe_with_math(df_styled_html)
     f.write("`````{only} html\n")
     f.write("````{margin}\n")         # Open margin
     # Workaround to get a numbered table: Put an empty list-table in the margin
@@ -838,6 +877,7 @@ These can be inserted into other pages.
 editable: true
 slideshow:
   slide_type: ''
+tags: [remove-cell]
 ---
 glue("c_chosen", f"${viz.format_pow2(c_chosen, 'latex')}$", display=True)
 
@@ -855,9 +895,9 @@ glue("table_L_list", f"${viz.format_pow2(L_list[0], format='latex')}$, "
                      f"${viz.format_pow2(L_list[1], format='latex')}$, and "
                      f"${viz.format_pow2(L_list[2], format='latex')}$",
      raw_myst=True, raw_latex=True)
-glue("table_λrange1", f"{table_λwindow1[0].m}–{table_λwindow1[1].m} ${table_λwindow1[0].units:~L}$",
+glue("table_lambda_range1", f"{table_λwindow1[0].m}–{table_λwindow1[1].m} ${table_λwindow1[0].units:~L}$",
      raw_myst=True, raw_latex=True)
-glue("table_λrange2", f"{table_λwindow2[0].m}–{table_λwindow2[1].m} ${table_λwindow2[0].units:~L}$",
+glue("table_lambda_range2", f"{table_λwindow2[0].m}–{table_λwindow2[1].m} ${table_λwindow2[0].units:~L}$",
      raw_myst=True, raw_latex=True)
 # glue("table_λmin1", **viz.formatted_quantity(table_λwindow1[0], precision=0))
 # glue("table_λmax1", **viz.formatted_quantity(table_λwindow1[1], precision=0))

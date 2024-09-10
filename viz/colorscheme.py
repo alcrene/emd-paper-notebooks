@@ -1,5 +1,5 @@
 """
-This file was originally part of the Macke Lab Toolboox:
+This file was originally part of the Macke Lab Toolbox:
 https://github.com/mackelab/mackelab-toolbox/tree/master/mackelab_toolbox/viz
 
 Copyright Alexandre René 2022,2023

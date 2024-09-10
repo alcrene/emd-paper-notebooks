@@ -17,6 +17,12 @@ def display_dataframe_with_math(df, raw=False):
     raw_html = re.sub(r"\$.*?\$", lambda m: convert_tex_to_html(m[0], raw=True), html)
     return raw_html if raw else HTML(raw_html)
 
+def sanitize(s):
+    r"""For whatever reason, cli_html does not like \underline:
+    it produces the error message “No tag in OneParamFunction read in \underline{…}”
+    """
+    return s.replace(r"\underline", r"\underbar")
+
 def convert_tex_to_html(html, raw=False):
     """
     Given some HTML text which may contain dollar-delimited math,
@@ -46,7 +52,7 @@ def convert_tex_to_html(html, raw=False):
     with NamedTemporaryFile('w', delete=False) as f:
         f.write(dedent(frontmatter).strip())
         f.write("\n\n")
-        f.write(html)
+        f.write(sanitize(html))
     with redirect_stdout(io.StringIO()) as sf:
         cli_html([f.name])
     fullhtml = sf.getvalue()  # Returns a large-ish HTML with the full styling header
@@ -54,11 +60,11 @@ def convert_tex_to_html(html, raw=False):
     # Strip HTML headers to keep only the body with converted math
     m = re.search(r'<body>\n<div class="document">([\s\S]*)</div>\n</body>', fullhtml)
     raw_html = m[1].strip()
-    # Special case: if we provided a snippet with no HTML markup at all, don’t wrap the result
+    # Special case: if we provided a snippet with no HTML markup at all, don’t wrap the result
     # in <p> tags
     if "\n" not in html and "<" not in html:
         m = re.match(r"<p>(.*)</p>", raw_html)
-        if m:  # Match was a success: there are <p> tags we can remove
+        if m:  # Match was a success: there are <p> tags we can remove
             raw_html = m[1]
     # Manually display the result as HTML
     return raw_html if raw else HTML(raw_html)

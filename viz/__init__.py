@@ -73,7 +73,11 @@ def glue(name: str, variable, display: bool=True,
     with shelve.open(str(config.paths.glue_shelf)) as db:
         if raw_myst : db[name + "__myst"]  = str(variable) if raw_myst  is True else raw_myst
         if raw_html : db[name + "__html"]  = str(variable) if raw_html  is True else raw_html
-        if raw_latex: db[name + "__latex"] = str(variable) if raw_latex is True else raw_latex
+        if raw_latex: db[name + "__latex"] = (str(variable).replace("μ", "\\mu ")  # greek letter
+                                                           .replace("µ", "\\mu ")  # micro prefix
+                                                           .replace("–", "--")
+                                                           .replace("–", "---")
+                                              if raw_latex is True else raw_latex)
 
 
 # + [markdown] tags=[]
@@ -93,6 +97,7 @@ dims = Dict(
         logL = hv.Dimension("logL", label="log likelihood"),
         Φ  = hv.Dimension("Φ", label=r"cum. prob. ($\Phi$)"),
         q  = hv.Dimension("q", label="loss ($q$)"),
+        Δq  = hv.Dimension("Δq", label="loss increment ($\Delta q$)"),
         Bemd = hv.Dimension("Bemd", label=r"$B^{\mathrm{EMD}}$"),
         Bconf = hv.Dimension("Bconf", label=r"$B^{\mathrm{conf}}$"),
         c = hv.Dimension("c", label="$c$"),
@@ -254,6 +259,46 @@ def ylabel_shift_hook(xshift=1.5, yshift=0):
 
 # + [markdown] tags=[]
 # ## Plotting functions
+# -
+
+# ### `make_Rdist_fig`
+
+def make_Rdist_fig(R_samples: dict, xticks: list, yticks: list, colors: hv.Cycle|list[str],
+                   xticklabels=None, yticklabels=None, aspect=3):
+    Rdists = [hv.Distribution(_Rlst, kdims=[dims.matplotlib.R], label=f"Model {a}")
+              for a, _Rlst in R_samples.items()]
+    Rcurves = [hv.operation.stats.univariate_kde(dist).to.curve()
+               for dist in Rdists]
+    fig_Rdists = hv.Overlay(Rdists) * hv.Overlay(Rcurves)
+
+    # Plot styling
+    if xticklabels is None and xticks and len(xticks) > 2:
+        xticklabels = [str(xticks[0])] + [""]*(len(xticks)-2) + [str(xticks[-1])]
+    if yticklabels is None and yticks and len(yticks) > 2:
+        yticklabels = [str(yticks[0])] + [""]*(len(yticks)-2) + [str(yticks[-1])]
+    hooks = []
+    if xticklabels:
+        hooks += [set_xticks_hook(xticks), set_xticklabels_hook(xticklabels), xlabel_shift_hook(7)]
+    if yticklabels:
+        hooks += [set_yticks_hook(yticks), set_yticklabels_hook(yticklabels), ylabel_shift_hook(5)]
+    elif not yticks:  # yticks is empty or None: remove yaxis completely
+        hooks += [yaxis_off_hook]  # NB: Using the Holoviews yaxis=None, which should have the same effect, doesn’t entirely work when other hooks are used.
+    hooks += [despine_hook(2)]
+    fig_Rdists.opts(
+        hv.opts.Distribution(alpha=.3),
+        hv.opts.Distribution(facecolor=colors, color="none", edgecolor="none", backend="matplotlib"),
+        hv.opts.Curve(color=colors),
+        hv.opts.Curve(linestyle="solid", backend="matplotlib"),
+        hv.opts.Overlay(backend="matplotlib", fontscale=1.3,
+                        hooks=hooks,
+                        legend_position="top_left", legend_cols=1,
+                        show_legend=False,
+                        xlim=fig_Rdists.range("R"),  # Redundant, but ensures range is not changed
+                        aspect=aspect
+                       )
+    )
+    return fig_Rdists
+
 
 # + [markdown] tags=[]
 # ### `plot_param_space`

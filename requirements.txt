@@ -43,6 +43,8 @@ myst-nb
 selenium
 phantomjs
 pillow
+sphinx-proof @ git+https://github.com/executablebooks/sphinx-proof
+sphinxcontrib-bibtex >= 2.6
 
 # Recording parameters and results
 #valconfig

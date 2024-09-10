@@ -335,7 +335,7 @@ class CandidateModel:
 # We use two types of noise for this example:
 #
 # Poisson noise
-# ~ is used to generate the actual data. (Eq. {eq}`eq_UV_true-obs-model`)
+# ~ is used to generate the actual data. ({eq}`eq_UV_true-obs-model`)
 #
 #   $$\tilde{\Bspec} \mid \Bspec \sim \frac{1}{s}\Poisson\bigl(s \, \Bspec\bigr) + \Bspec_0$$ (eq_code_poisson-noise)
 #
@@ -658,6 +658,7 @@ Qrisk = Dict({
 # :::
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
+# (code_uv-example-spectra)=
 # ### Example spectra
 
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-output", "hide-input"]
@@ -749,24 +750,36 @@ def plot_data(L, T=data_T, λmin=data_λ_min, λmax=data_λ_max, s=data_noise_s,
 # #panelA.opts(framewise=True)
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-cell"]
-# viz.save(fig, config.paths.figures/"uv_example-spectra.pdf")
+# #viz.save(fig, config.paths.figures/"uv_example-spectra.pdf")
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "hide-input"]
 # # Rearrange figure for HTML output
-# panelA.opts(hv.opts.Curve(hooks=[]))  # Make xaxis visible again
-# panelB.opts(hv.opts.Curve(hooks=[viz.yaxis_off_hook]))  # Hide yaxis instead
-# figrow = panelA * hv.Text(30, 0.00055, f"$s = {viz.format_pow10(data_noise_s, format='latex')}$\n\n$L = {viz.format_pow2(L_small, format='latex')}$", halign="right") \
+# #panelA.opts(hv.opts.Curve(hooks=[]))  # Make xaxis visible again
+# #panelB.opts(hv.opts.Curve(hooks=[viz.yaxis_off_hook]))  # Hide yaxis instead
+# panelA.opts(hv.opts.Scatter(
+#                 hooks=[viz.set_yticks_hook([0, 0.0004, 0.0008]),
+#                        viz.set_yticklabels_hook(["0", "", "0.0008"]),
+#                        viz.xaxis_off_hook,
+#                        viz.ylabel_shift_hook(20),
+#                        viz.despine_hook])
+#            )
+# panelB.opts(hv.opts.Curve(
+#                 hooks=[viz.set_yticks_hook([0, 0.0004, 0.0008]),
+#                        viz.set_yticklabels_hook(["0", "", "0.0008"]),
+#                        viz.ylabel_shift_hook(10)]))
+# figcol = panelA * hv.Text(30, 0.00055, f"$s = {viz.format_pow10(data_noise_s, format='latex')}$\n\n$L = {viz.format_pow2(L_small, format='latex')}$", halign="right") \
 #          + (panelB * hv.Text(30, 0.00055, f"$s = {viz.format_pow10(data_noise_s, format='latex')}$\n\n$L = {viz.format_pow2(L_large, format='latex')}$", halign="right")).opts(
 #              show_legend=False)
-# figrow.opts(
+# figcol.opts(
 #     hv.opts.Layout(hspace=0.05, vspace=0.05, fontscale=1.3,
 #                    fig_inches=7.5/2,
 #                    sublabel_position=(0.3, .8), sublabel_format="({alpha})",
-#                    backend="matplotlib")
-# )
+#                    backend="matplotlib"),
+#     
+# ).cols(1)
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-cell"]
-# viz.save(figrow, config.paths.figures/"uv_example-spectra.svg")
+# viz.save(figcol, config.paths.figures/"uv_example-spectra_col.svg")
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Standard error of fits
@@ -1585,7 +1598,7 @@ c_list = [2**-4, 2**-2, 2**-1, 2**0, 2**1, 2**3]
 # :::{note}
 # :class: margin
 #
-# - The Poisson noise (Eq. {eq}`eq_code_poisson-noise`) has variance $\frac{\Bspec}{s}$, and therefore its standard deviation scales only as $\Bspec^{1/2}$. Since different $λ$ ranges lead to different orders of magnitude for $\Bspec$, if we kept the same $s$ for all rows, we would not see similar amounts of spread. This is why we decrease $s$ in the last row, where wavelength ($λ$) is lower.
+# - The Poisson noise ({eq}`eq_code_poisson-noise`) has variance $\frac{\Bspec}{s}$, and therefore its standard deviation scales only as $\Bspec^{1/2}$. Since different $λ$ ranges lead to different orders of magnitude for $\Bspec$, if we kept the same $s$ for all rows, we would not see similar amounts of spread. This is why we decrease $s$ in the last row, where wavelength ($λ$) is lower.
 # :::
 
 # %% editable=true slideshow={"slide_type": ""}
@@ -1701,10 +1714,13 @@ def panel_param_iterator(L=L_small, purpose="data", progbar=True):
 #     _R_samples = _draw_R_samples(_dataset, c)
 #
 #     _Rdists = [hv.Distribution(_Rlst, kdims=[dims.R], label=f"{a}")
-#           for a, _Rlst in _R_samples.items()]
+#                for a, _Rlst in _R_samples.items()]
 #     _Rcurves = [hv.operation.stats.univariate_kde(dist).to.curve()
-#                for dist in _Rdists]
+#                 for dist in _Rdists]
+#     Bemd = (_R_samples["Planck"] < _R_samples["Rayleigh-Jeans"][:,None]).mean()
 #     _fig = hv.Overlay(_Rdists) * hv.Overlay(_Rcurves)
+#     _fig *= hv.Text(0, 0, "$B^{\mathrm{EMD}}="+f"{Bemd:.2f}$", halign="left", label="Bemd")
+#         # The x,y position of the Bemd will be set later
 #
 #     return _fig
 #
@@ -1735,10 +1751,15 @@ def panel_param_iterator(L=L_small, purpose="data", progbar=True):
 #           + [panel.redim.range(R=(-1e17, 6e17), Density=(0, 0.7e-17), R_density=(0,0.7e-17)) for panel in Rdist_panels[6:9]]
 # hooks = {i: [] for i in range(len(_panels))}
 # for i, panel in enumerate(_panels):
+#     text = panel.Text.Bemd
 #     if i < 3:
 #         panel.opts(xticks=[-6, -2], yticks=(0, 4))
+#         text.x = -3.5  # NB: This doesn’t change the position of the Text
+#         text.y = 4     #     but will set the position of _cloned_ Text
 #     elif 3 <= i < 6:
 #         panel.opts(xticks=[-5, 15], yticks=(0, 1))
+#         text.x = 5
+#         text.y = 1
 #     elif 6 <= i < 9:
 #         panel *= hv.VLine(panel.Curve.Planck.data["R"].mean()).opts(color=colors.Planck, linewidth=2)
 #         hooks[i].extend([viz.set_yticks_hook([0, 6e-18], labels=["0", "$6\\times 10^{-18}$"], rotation=90),
@@ -1746,6 +1767,9 @@ def panel_param_iterator(L=L_small, purpose="data", progbar=True):
 #                          viz.set_xticks_hook([0, 3e17 ], labels=["0", "$3\\times 10^{17}$"])])
 #                          #viz.set_xticklabels_hook(["0", "$3\\times 10^{17}$"])])
 #         _panels[i] = panel
+#         text.x = 3e17
+#         text.y = 0.4e-17
+#     text.data = (text.x, text.y, *text.data[2:])
 #     if i != 7:
 #         panel.opts(xlabel="")
 #     if i != 3:
