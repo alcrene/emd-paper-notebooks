@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.15.0
+#       jupytext_version: 1.16.4
 #   kernelspec:
 #     display_name: Python (emd-paper)
 #     language: python
@@ -298,10 +298,7 @@ class DataModel:
 @dataclass(frozen=True)
 class CandidateModel:
     """Model variant used to compute candidate predictions given observed data.
-    Uses the {(x,y)} -> {ŷ} signature. Also accepts {x} -> {ŷ}.
-
-    Instead of an array of time points, takes previously computed (or recorded)
-    data, extracts the time points, and computes the candidate model’s prediction.
+    Uses the {x} -> {ŷ} signature. Also accepts {(x,y)} -> {ŷ}.
     """
     phys_model: Literal["Rayleigh-Jeans", "Planck"]
     T         : PintQuantity    # units: K
