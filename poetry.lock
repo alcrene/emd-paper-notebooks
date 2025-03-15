@@ -685,13 +685,15 @@ files = [
 
 [[package]]
 name = "emdcmp"
-version = "1.1.0rc1"
+version = "1.1.0"
 description = "Original implementation of the EMD (empirical model discrepancy) model comparison criterion"
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "emdcmp-1.1.0-py3-none-any.whl", hash = "sha256:ba9df919281c73c82cc21b7a5c8b6778a4fcacf485fef3917ffd82e54d0f0b4b"},
+    {file = "emdcmp-1.1.0.tar.gz", hash = "sha256:5e6877c6adac722e1279081c287ccd066116d49d1f8771dd157427e6dca9bb33"},
+]
 
 [package.dependencies]
 joblib = "*"
@@ -707,12 +709,6 @@ valconfig = ">=0.1.2"
 doc = ["addict", "bokeh", "ghp-import", "holoviews", "holoviews", "ipykernel", "jupyter-book (>=0.14)", "jupyter_bokeh", "jupytext", "matplotlib", "pandas", "phantomjs", "pillow", "seaborn", "selenium", "sphinx-proof"]
 test = ["pytest"]
 viz = ["holoviews", "matplotlib", "pandas", "seaborn"]
-
-[package.source]
-type = "git"
-url = "https://github.com/alcrene/emdcmp.git"
-reference = "v1.1.0-rc.1"
-resolved_reference = "d7f6096a29ef87c993db423058c3120dc2bad513"
 
 [[package]]
 name = "exceptiongroup"
@@ -4153,4 +4149,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "6512c938eced9a084162636423051c380bd94dc23f68c7906785d68cfc677a0f"
+content-hash = "bf46c33bd8e479942c785ffbd072bc732bdef3c4ea31d74152d939a6b8d4c3c8"

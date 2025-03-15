@@ -6,7 +6,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.4
+    jupytext_version: 1.16.7
 kernelspec:
   display_name: Python (emd-paper)
   language: python
@@ -111,7 +111,7 @@ $$
 
 (In the expression, $\displaystyle \sum_{\vec{i}\sim \iI_k}^r$ means to draw $r$ samples $\vec{i}$ from $\iI_k$.)
 
-```{code-cell} ipython3
+```{code-cell}
 import logging
 import sys
 import itertools
@@ -150,13 +150,13 @@ where the approximation holds as long as $\bigl\lfloor\frac{x}{2^b}\bigr\rfloor 
 
 As a final optimization note, we use bitshifts (`x >> 30`) instead of integer division (`x // 2**30`), which are about 8x faster.
 
-```{code-cell} ipython3
+```{code-cell}
 def log(x, _convert_to_base_e=math.log2(math.exp(1)), _max_bit_length=sys.float_info.max_exp-1):
     d = max(0, x.bit_length() - _max_bit_length)
     return d/_convert_to_base_e + math.log(x >> d)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 ---
 editable: true
 slideshow:
@@ -181,7 +181,7 @@ assert log(400) == math.log(400)
 - all indices with a given total index;
 - all indices, ordered by their total index.
 
-```{code-cell} ipython3
+```{code-cell}
 def gen_idcs_with_total(sizes, tot_index) -> Generator[tuple[int]]:
     """
     Yield all indices for an array of size `sizes`
@@ -231,7 +231,7 @@ def gen_idcs_with_total(sizes, tot_index, remaining_index_space=None) -> Generat
 ```
 :::
 
-```{code-cell} ipython3
+```{code-cell}
 def gen_idcs_by_total(sizes) -> Generator[tuple[int]]:
     """
     Return a generator which acts like a nested `range` on `sizes`,
@@ -274,7 +274,7 @@ def gen_idcs_by_total(sizes) -> Generator[tuple[int]]:
 - Sample one index tuples uniformly from all index tuples that have total $k$.
 - Sample multiple random index tuples without replacement.
 
-```{code-cell} ipython3
+```{code-cell}
 def get_unif_idx(sizes, tot_index) -> np.ndarray[int]:
     """
     Return an index tuple which sums to `tot_index` and
@@ -301,7 +301,7 @@ def get_unif_idx(sizes, tot_index) -> np.ndarray[int]:
     return idx
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 def get_rnd_idx(sizes, tot_index, rng=None) -> tuple[int]:
     """
     Return an index tuple which sums to `tot_index`,
@@ -317,7 +317,7 @@ def get_rnd_idx(sizes, tot_index, rng=None) -> tuple[int]:
     return tuple(idx)
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 def get_multiple_rnd_idcs(sizes, tot_index, num, rng=None) \
     -> set[tuple[int]]:
     """
@@ -368,7 +368,7 @@ is symmetric.
 
 ### Simple recursive algorithm
 
-```{code-cell} ipython3
+```{code-cell}
 ---
 editable: true
 slideshow:
@@ -407,7 +407,7 @@ Glück and Köppl use a more clever scheme for splitting the size tuple, which l
 (The “Divide and conquer” approach is already mention to in their earlier paper [(Glück et al., 2013)](doi:10.1007/978-3-642-38527-8_9), albeit with a less explicit description.)
 :::
 
-```{code-cell} ipython3
+```{code-cell}
 ---
 editable: true
 slideshow:
@@ -631,7 +631,7 @@ def index_mult_reflect(S1: np.ndarray[int], S2: np.ndarray[int], mults_S1: np.nd
 ```
 :::
 
-```{code-cell} ipython3
+```{code-cell}
 def _index_logmult_reflect(S1: np.ndarray[int], S2: np.ndarray[int], logmults_S1: np.ndarray[float]
                            ) -> np.ndarray:
     """
@@ -680,7 +680,7 @@ def _index_logmult_reflect(S1: np.ndarray[int], S2: np.ndarray[int], logmults_S1
     return logmults_S2
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 index_logmult_cache = {}
 def index_logmultiplicity(sizes: tuple[int,...], k: int) -> float:
     logmults = index_logmult_cache.get(sizes)
@@ -715,7 +715,7 @@ __Timing__: This takes about 90 seconds to execute on a size tuple of dimension 
 
 Confirm that the optimized version returns the same values.
 
-```{code-cell} ipython3
+```{code-cell}
 ---
 editable: true
 slideshow:
@@ -746,7 +746,7 @@ assert math.isclose(index_multiplicity((5,)*300, 1000), index_multiplicity_simpl
 If we decide to add this feature back as an option flag, it would be important to return _log_ multiplicities to avoid numerical overflows.
 :::
 
-```{code-cell} ipython3
+```{code-cell}
 @dataclass(frozen=True)
 class EnumerableDataset(Dataset):
     def value_sets(self, thresh=0.01):
@@ -941,7 +941,7 @@ In practice, even in the worse cases, this approach allows to halve the computat
 The numerator is always positive, but the denominator can be negative ($\comp_{k'}$ is a logarithm, so its image technically spans all of $\RR$), especially for small $k'$. This is why in [](#eq_mdl_early-termination-ratio) we divide by $\lvert\comp_{k'}(\M, π)\rvert$ to ensure a positive ratio.
 :::
 
-```{code-cell} ipython3
+```{code-cell}
 ---
 editable: true
 slideshow:
@@ -968,7 +968,7 @@ def gen_representative_likelihoods(D: EnumerableDataset, r: int, m:int,
     #return mults, rep_l
 ```
 
-```{code-cell} ipython3
+```{code-cell}
 ---
 editable: true
 slideshow:

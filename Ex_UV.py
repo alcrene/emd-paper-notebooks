@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.4
+#       jupytext_version: 1.16.7
 #   kernelspec:
 #     display_name: Python (emd-paper)
 #     language: python
@@ -89,9 +89,9 @@ logger = logging.getLogger(__name__)
 # EMD imports
 
 # %% editable=true slideshow={"slide_type": ""}
-import emd_falsify as emd
-import emd_falsify.tasks
-import emd_falsify.viz
+import emdcmp as emd
+import emdcmp.tasks
+import emdcmp.viz
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # Project imports
@@ -1564,7 +1564,7 @@ c_list = [2**-4, 2**-2, 2**-1, 2**0, 2**1, 2**3]
 # :::{admonition} `compare_matrix` implementation
 # :class: note dropdown
 #
-# The `compare_matrix` function provided by `emd_falsify` simply loops through all $(a,b)$ model pairs, and counts the number of $R_a$ samples which are less than $R_b$:
+# The `compare_matrix` function provided by `emdcmp` simply loops through all $(a,b)$ model pairs, and counts the number of $R_a$ samples which are less than $R_b$:
 #
 # ```python
 # def compare_matrix(R_samples: Dict[str, ArrayLike]) -> pd.DataFrame:

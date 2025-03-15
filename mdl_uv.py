@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.4
+#       jupytext_version: 1.16.7
 #   kernelspec:
 #     display_name: Python (emd-paper)
 #     language: python
@@ -387,10 +387,10 @@ def get_multiple_rnd_idcs(sizes, tot_index, num, rng=None) \
 
 # %% [markdown]
 # :::{note}
-# The basic idea of this algorithm is the same as the _“Simple Divide and Conquer”_ approach described by [Glück and Köppl](doi:10.1007/s00453-020-00713-7),
+# The basic idea of this algorithm is the same as the _“Simple Divide and Conquer”_ approach described by [Glück and Köppl](https://doi.org/10.1007/s00453-020-00713-7),
 # albeit the version here is even more naive.
 # Glück and Köppl use a more clever scheme for splitting the size tuple, which likely results in fewer recursion steps than what we do here, although I have not checked this.
-# (The “Divide and conquer” approach is already mention to in their earlier paper [(Glück et al., 2013)](doi:10.1007/978-3-642-38527-8_9), albeit with a less explicit description.)
+# (The “Divide and conquer” approach is already mention to in their earlier paper [(Glück et al., 2013)](https://doi.org/10.1007/978-3-642-38527-8_9), albeit with a less explicit description.)
 # :::
 
 # %% editable=true slideshow={"slide_type": ""} tags=[]
@@ -481,7 +481,7 @@ def _index_multiplicity_recursive(sizes: tuple[int,...], tot_index: int,
 # %% [markdown]
 # ### Polynomial algorithm (current state-of-the-art)
 #
-# A search of the literature turns up paper by [Glück et al (2013)](doi:10.1007/978-3-642-38527-8_9) (along with a [C++ implementation](https://github.com/koeppl/integer_partition) and follow-up paper by [Glück and Köppl (2020)](doi:10.1007/s00453-020-00713-7)).
+# A search of the literature turns up paper by [Glück et al (2013)](https://doi.org/10.1007/978-3-642-38527-8_9) (along with a [C++ implementation](https://github.com/koeppl/integer_partition) and follow-up paper by [Glück and Köppl (2020)](https://doi.org/10.1007/s00453-020-00713-7)).
 #
 # Somewhat annoyingly, neither paper gives a complete, end-to-end description of the algorithm, leaving some parts only implicitely defined. (The follow-up paper does improve in this regard though.) It is therefore hard to say exactly how their algorithm works without implementing it ourselves, but from what I gather it is something like this:
 #

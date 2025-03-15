@@ -24,7 +24,7 @@ slideshow:
 ---
 import Ex_UV
 import Ex_Prinz2004
-import emd_falsify as emd
+import emdcmp as emd
 import matplotlib as mpl
 import numpy as np
 import holoviews as hv
@@ -561,7 +561,7 @@ To help better differentiate the paths:
 - we limit ourselves to the window (0.5, 0.75). So effectively we start after the first two refinement steps ($2^{-2} = 0.25$).
 
 ```{code-cell} ipython3
-from emd_falsify.path_sampling import generate_path_hierarchical_beta, draw_from_beta
+from emdcmp.path_sampling import generate_path_hierarchical_beta, draw_from_beta
 ```
 
 ```{code-cell} ipython3
@@ -571,7 +571,7 @@ c_refine = 16
 ```{code-cell} ipython3
 import math
 import scipy
-from emd_falsify.path_sampling import f_mid, f
+from emdcmp.path_sampling import f_mid, f
 def get_beta_rv(r: float, v: float) -> tuple[float]:
     """
     Return α and β corresponding to `r` and `v`.

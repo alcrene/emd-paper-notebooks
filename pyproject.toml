@@ -15,12 +15,11 @@ readme = "README.md"
 
 python = "^3.10"
 
-#emd-falsify = { git = "https://github.com/alcrene/emd-falsify.git", tag = "v1.0.2" }
 #pyloric-simulator = { git = "https://github.com/alcrene/pyloric-network-simulator.git", tag = "v0.1.0" }
 #colored-noise = { git = "git@github.com:alcrene/colored-noise.git" }
 #emd-falsify = "1.0.2"
-emdcmp = { git = "https://github.com/alcrene/emdcmp.git", tag = "v1.1.0-rc.1" }
-#emdcmp = "1.1.0"
+#emdcmp = { git = "https://github.com/alcrene/emdcmp.git", tag = "v1.1.0-rc.1" }
+emdcmp = "1.1.0"
 pyloric-network-simulator = "0.1.1"
 valconfig = ">=0.1.2-rc3"
 

@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.4
+#       jupytext_version: 1.16.7
 #   kernelspec:
 #     display_name: Python (emd-paper)
 #     language: python
@@ -60,7 +60,7 @@ import psutil
 #from viz import glue
 
 # %% editable=true slideshow={"slide_type": ""}
-from emd_falsify import draw_R_samples
+from emdcmp import draw_R_samples
 from other_criteria import FactorizedPrior, get_ppfs, R, AIC, BIC, DIC, logℰ, elpd, 𝓁
 import mdl_uv
 
@@ -503,7 +503,7 @@ assert len(mlist) <= len(colors.candidates)
 # ::::{margin}
 # :::{hint}
 # To get the location of the cache for $R$-distributions, check
-# `emd_falsify.config.caching.joblib.location`
+# `emdcmp.config.caching.joblib.location`
 #
 # The code from `other_criteria` caches itself under `.joblib-cache/joblib/other_criteria`
 # :::

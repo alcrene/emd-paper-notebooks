@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.15.0
+#       jupytext_version: 1.16.7
 #   kernelspec:
 #     display_name: Python (emd-paper)
 #     language: python
@@ -72,7 +72,7 @@ import dynesty
 import xarray
 import arviz
 
-import emd_falsify as emd
+import emdcmp as emd
 
 import matplotlib as mpl
 
@@ -620,7 +620,7 @@ def BR(𝒟): return Criterion(-R("Planck", 𝒟), -R("Rayleigh-Jeans", 𝒟))
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-input"]
-import emd_falsify as emd
+import emdcmp as emd
 emd.utils.GitSHA()
 
 # %% editable=true slideshow={"slide_type": ""}

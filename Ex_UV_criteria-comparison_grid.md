@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.4
+    jupytext_version: 1.16.7
 kernelspec:
   display_name: Python (emd-paper)
   language: python
@@ -74,7 +74,7 @@ editable: true
 slideshow:
   slide_type: ''
 ---
-from emd_falsify import draw_R_samples
+from emdcmp import draw_R_samples
 from other_criteria import FactorizedPrior, get_ppfs, R, AIC, BIC, DIC, logℰ, elpd, 𝓁
 import mdl_uv
 ```
@@ -634,7 +634,7 @@ Managing our own cache under `data/*-model-compare` makes it easier to archive r
 ::::{margin}
 :::{hint}
 To get the location of the cache for $R$-distributions, check
-`emd_falsify.config.caching.joblib.location`
+`emdcmp.config.caching.joblib.location`
 
 The code from `other_criteria` caches itself under `.joblib-cache/joblib/other_criteria`
 :::

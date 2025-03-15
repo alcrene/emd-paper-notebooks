@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.4
+    jupytext_version: 1.16.7
 kernelspec:
   display_name: Python (emd-paper)
   language: python
@@ -84,9 +84,9 @@ editable: true
 slideshow:
   slide_type: ''
 ---
-import emd_falsify as emd
-import emd_falsify.tasks
-import emd_falsify.viz
+import emdcmp as emd
+import emdcmp.tasks
+import emdcmp.viz
 ```
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
@@ -192,7 +192,7 @@ slideshow:
 tags: [remove-cell, active-ipynb]
 ---
 logger.setLevel(config.logging.level)
-logging.getLogger("emd_falsify.tasks").setLevel(config.logging.level)
+logging.getLogger("emdcmp.tasks").setLevel(config.logging.level)
 ```
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
@@ -2904,7 +2904,7 @@ print(":::")
 :::{admonition} `compare_matrix` implementation
 :class: note dropdown
 
-The `compare_matrix` function provided by `emd_falsify` simply loops through all $(a,b)$ model pairs, and counts the number of $R_a$ samples which are larger than $R_b$:
+The `compare_matrix` function provided by `emdcmp` simply loops through all $(a,b)$ model pairs, and counts the number of $R_a$ samples which are larger than $R_b$:
 
 ```python
 def compare_matrix(R_samples: Dict[str, ArrayLike]) -> pd.DataFrame:

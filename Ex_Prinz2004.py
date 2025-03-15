@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.4
+#       jupytext_version: 1.16.7
 #   kernelspec:
 #     display_name: Python (emd-paper)
 #     language: python
@@ -69,9 +69,9 @@ logger = logging.getLogger(__name__)
 # EMD imports
 
 # %% editable=true slideshow={"slide_type": ""}
-import emd_falsify as emd
-import emd_falsify.tasks
-import emd_falsify.viz
+import emdcmp as emd
+import emdcmp.tasks
+import emdcmp.viz
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # Project imports
@@ -119,7 +119,7 @@ viz.save.update_figure_files = False
 
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-cell", "active-ipynb"]
 # logger.setLevel(config.logging.level)
-# logging.getLogger("emd_falsify.tasks").setLevel(config.logging.level)
+# logging.getLogger("emdcmp.tasks").setLevel(config.logging.level)
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ### Dimensions
@@ -2246,7 +2246,7 @@ def get_color(a):
 # :::{admonition} `compare_matrix` implementation
 # :class: note dropdown
 #
-# The `compare_matrix` function provided by `emd_falsify` simply loops through all $(a,b)$ model pairs, and counts the number of $R_a$ samples which are larger than $R_b$:
+# The `compare_matrix` function provided by `emdcmp` simply loops through all $(a,b)$ model pairs, and counts the number of $R_a$ samples which are larger than $R_b$:
 #
 # ```python
 # def compare_matrix(R_samples: Dict[str, ArrayLike]) -> pd.DataFrame:

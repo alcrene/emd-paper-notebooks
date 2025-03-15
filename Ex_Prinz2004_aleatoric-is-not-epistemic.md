@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.0
+    jupytext_version: 1.16.7
 kernelspec:
   display_name: Python (emd-paper)
   language: python
@@ -542,7 +542,7 @@ R_synthetic_samples_blackbody = R_synthetic_samples
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
 :::{margin}
-**Synthetic aleatoric uncertainty**
+**Synthetic estimate of finite-size uncertainty**
 :::
 
 Accurately representing the distributions is delicate: we want to show that they become Dirac deltas, but the effect is so pronounced that they can’t all be plotted on the same scale.
