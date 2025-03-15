@@ -4,6 +4,7 @@
 # + tags=[]
 import seaborn as sns
 import holoviews as hv
+import param
 
 # + tags=[]
 import logging
@@ -256,6 +257,31 @@ def ylabel_shift_hook(xshift=1.5, yshift=0):
         label = ax.yaxis.label
         label.set_transform(label.get_transform() + shift)
     return hook
+
+
+# -
+
+# ## Holoviews transforms
+
+# + [markdown] tags=[]
+# ### `differences`
+
+# + tags=[]
+class differences(hv.Operation):
+    """
+    Take a HoloMap of overlaid Curves, and replace all curves by their difference
+    with respect to a reference curve.
+    """
+    m0 = param.Number(default=0, doc="Differences will be computed with respect to this model.")
+    vdim = param.String(default="score", doc="The value dimension of the curves")
+    
+    def _process(self, ndov, key=None):
+        ref = ndov.select(m=self.m0).dimension_values(self.vdim)
+        ndov = ndov.clone({key: curve.clone((curve.dimension_values("L"),
+                                             curve.dimension_values(self.vdim) - ref))
+                           for key, curve in ndov.items()})
+        return ndov
+
 
 # + [markdown] tags=[]
 # ## Plotting functions

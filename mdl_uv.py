@@ -1,6 +1,23 @@
-# %% [markdown] editable=true slideshow={"slide_type": ""}
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: slideshow,tags,editable,-all
+#     formats: py:percent,md:myst
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.16.4
+#   kernelspec:
+#     display_name: Python (emd-paper)
+#     language: python
+#     name: emd-paper
+# ---
+
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
 # ---
 # math:
+#     '\RR'   : '\mathbb{R}'
 #     '\M'    : '\mathcal{M}'
 #     '\NML'  : '\mathrm{NML}'
 #     '\D'    : '\mathcal{D}'
@@ -55,8 +72,8 @@
 #    The total number of datasets is therefore $\prod_{j=0}^{L-1} \lvert \{\Bspec_j\} \rvert$.  
 #    Moreover, we can identify each dataset with its index tuple $\vec{i} = (i_0, i_1, \dotsc, i_{L-1})$.
 #
-# :::{figure}
-# ![](./MDL_dataspace_sampling.svg)
+# :::{figure} ./MDL_dataspace_sampling.svg
+#
 # Schematic of the dataset sampling algorithm.
 # :::
 #
@@ -94,6 +111,7 @@
 # %%
 import logging
 import sys
+import itertools
 import multiprocessing   # Only used to detect if we are a child process, and offset progress bars
 from collections.abc import Callable, Generator
 from dataclasses import dataclass
@@ -155,23 +173,55 @@ def log(x, _convert_to_base_e=math.log2(math.exp(1)), _max_bit_length=sys.float_
 # - all indices, ordered by their total index.
 
 # %%
-def gen_idcs_with_total(sizes, tot_index, remaining_index_space=None) -> Generator[tuple[int]]:
+def gen_idcs_with_total(sizes, tot_index) -> Generator[tuple[int]]:
     """
     Yield all indices for an array of size `sizes`
-    which sum up to `tot_index.
+    which sum up to `tot_index`.
     """
     sizes = np.asarray(sizes, dtype=int)
-    if remaining_index_space is None:
-        max_idx = sizes - 1
-        remaining_index_space = max_idx.sum() - np.cumsum(max_idx)  # The amount of combined "index space" we have remaining at positions to the right of i
+    max_idx = sizes - 1
+    remaining_index_space = np.cumsum(max_idx[::-1])[::-1]   # The amount of combined "index space" remaining at positions ⩾ j
+    yield from _gen_idcs_with_total(sizes, tot_index, remaining_index_space)
+
+def _gen_idcs_with_total(sizes, tot_index, remaining_index_space=None) -> Generator[tuple[int]]:
     if len(sizes) == 1:
         if tot_index < sizes[0]:
             yield (tot_index,)
     else:
-        for w in range(max(0,tot_index-remaining_index_space[0]), min(sizes[0], tot_index+1)):
-            for nested_ws in gen_idcs_with_total(sizes[1:], tot_index-w, remaining_index_space[1:]):
-                yield (w, *nested_ws)
+        j = len(sizes) // 2
+        remaining_left = remaining_index_space[:j] - remaining_index_space[j]
+        remaining_right = remaining_index_space[j:]
+        for w in range(max(0,tot_index-remaining_right[0]), min(remaining_left[0]+1, tot_index+1)):
+            for left_idx, right_idx in itertools.product(
+                    _gen_idcs_with_total(sizes[:j], w, remaining_left),
+                    _gen_idcs_with_total(sizes[j:], tot_index-w, remaining_right)):
+                yield left_idx + right_idx
 
+
+# %% [markdown]
+# :::{dropdown} Simpler version
+#
+# This version has easier to follow recursion, but it hits the recursion limit much faster because each recursion level reduces the length of `sizes` only by 1. It is also substantially slower.
+#
+# ```python
+# def gen_idcs_with_total(sizes, tot_index, remaining_index_space=None) -> Generator[tuple[int]]:
+#     """
+#     Yield all indices for an array of size `sizes`
+#     which sum up to `tot_index`.
+#     """
+#     sizes = np.asarray(sizes, dtype=int)
+#     if remaining_index_space is None:
+#         max_idx = sizes - 1
+#         remaining_index_space = max_idx.sum() - np.cumsum(max_idx)  # The amount of combined "index space" we have remaining at positions to the right of i
+#     if len(sizes) == 1:
+#         if tot_index < sizes[0]:
+#             yield (tot_index,)
+#     else:
+#         for w in range(max(0,tot_index-remaining_index_space[0]), min(sizes[0], tot_index+1)):
+#             for nested_ws in gen_idcs_with_total(sizes[1:], tot_index-w, remaining_index_space[1:]):
+#                 yield (w, *nested_ws)
+# ```
+# :::
 
 # %%
 def gen_idcs_by_total(sizes) -> Generator[tuple[int]]:
@@ -207,8 +257,7 @@ def gen_idcs_by_total(sizes) -> Generator[tuple[int]]:
     #tot_size = int(np.prod(sizes.astype(float)))  # Even with floats this can overflow
     max_idx = sizes - 1
     for k in range(max_idx.sum()):
-        for ws in gen_idcs_with_total(sizes, k):
-            yield ws
+        yield from gen_idcs_with_total(sizes, k)
 
 
 # %% [markdown]
@@ -272,7 +321,7 @@ def get_multiple_rnd_idcs(sizes, tot_index, num, rng=None) \
     The returned index tuples are guaranteed to be distinct.
     """
     rng = np.random.default_rng(rng)
-    with np.errstate(over="ignore"):  # Overflow just means that there are *definitely* more possible index tuples that `tot_index`
+    with np.errstate(over="ignore"):  # If we get overflow, there are *definitely* more index tuples than `tot_index`
         if index_multiplicity(tuple(sizes), tot_index) < num:
             # No point in generating them randomly if we will generate them all
             return list(gen_idcs_with_total(sizes, tot_index))
@@ -332,7 +381,7 @@ def get_multiple_rnd_idcs(sizes, tot_index, num, rng=None) \
 # :::{card} Runtime
 # The runtime of this function is very dependent on the value of $k$.
 # At a recursion level $r$, it spawns (in expectation) $\sim (k-r)$ evaluations at the next level. So the runtime (and cache memory requirements) grows almost exponentially in $L$.  
-# On the one hand, this means that when $k$ is close to zero or $\sum_i s_j - L$, `index_multiplicity_recursive` terminates in a milliseconds after just a few recursions. This is true even for large dimensions $L \gtrsim 1000$.  
+# On the one hand, this means that when $k$ is close to zero or $\sum_i s_j - L$, `index_multiplicity_recursive` terminates in milliseconds after just a few recursions. This is true even for large dimensions $L \gtrsim 1000$.  
 # On the other hand, for $100 \lesssim k \lnapprox \sum_i s_j - L$, __the function might run for days__ and use __many GBs of RAM__ for the cache
 # :::
 
@@ -488,12 +537,7 @@ def _index_multiplicity_recursive(sizes: tuple[int,...], tot_index: int,
 #
 # :::{card} Runtime
 #
-# The runtime and memory requirements are essentially __linear in L__ (the length of an index tuple). More specifically:
-#
-# - Computation of the first value takes $\oO(\sum_j \log s_j) < \oO(L \max_j s_j)$ time.  
-#   (Compare with the $\oO(2^L L^3)$ time for constructing the data structure of the polynomial algorithm.)
-# - Computation of subsequent values is $\oO(1)$, since it is just a lookup in an array.  
-#   (Compare with $\oO(L)$ lookups when using the polynomial algorithm.)
+# The runtime and memory requirements are essentially __linear in L__ (the length of an index tuple).
 #
 # __Compared to the recursive one__, this algorithm will be notably slower for evaluating multiplicity for a _single_ small total index $k$ and large $L$.
 # It might take 100 s where the recursive one takes 10 ms. __However__
@@ -665,6 +709,13 @@ def index_multiplicity(sizes: tuple[int,...], k: int) -> float:
 # - `gen_possible_datasets` generates all datasets.
 # - `gen_representative_datasets` generates up to $r$ different datasets from each index class $\iI_k$. (It may generate fewer datasets, if $\lvert \iI_k \rvert < r$.)
 
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
+# :::{important}
+# `gen_possible_datasets` used to return the multiplicity of each index class, but this turned out not to be necessary. (We need to compute the multiplicities in advance, and can then just store them.)
+#
+# If we decide to add this feature back as an option flag, it would be important to return _log_ multiplicities to avoid numerical overflows.
+# :::
+
 # %%
 @dataclass(frozen=True)
 class EnumerableDataset(Dataset):
@@ -727,7 +778,7 @@ class EnumerableDataset(Dataset):
             ℬarr.m[:] = tuple(ℬvals[i] for ℬvals, i in zip(ℬsets, idcs))
             yield λ, ℬarr
     def gen_representative_datasets(self, thresh=0.0001, r=10, rng=None) \
-        -> Generator[tuple[int, np.ndarray, list[np.ndarray]]]:
+        -> Generator[tuple[np.ndarray, list[np.ndarray]]]:
         """
         Iterator for a sampling of (hopefully) representative datasets.
         As in `gen_possible_datasets`, datasets are ordered from most to least likely;
@@ -744,7 +795,6 @@ class EnumerableDataset(Dataset):
 
         Yields
         ------
-        multiplicity: int
         λ           : array
         {ℬ}         : list[array]
         """
@@ -762,7 +812,8 @@ class EnumerableDataset(Dataset):
             rep_idx_tuples = get_multiple_rnd_idcs(ℬsizes, k, r, rng=rng)
             for ℬarr, idx_tuple in zip(ℬarrs, rep_idx_tuples):
                 ℬarr.m[:] = tuple(ℬvals[i] for ℬvals, i in zip(ℬsets, idx_tuple))
-            yield index_multiplicity(tuple(ℬsizes), k), λ, ℬarrs[:len(rep_idx_tuples)]
+            #yield index_multiplicity(tuple(ℬsizes), k), λ, ℬarrs[:len(rep_idx_tuples)]
+            yield λ, ℬarrs[:len(rep_idx_tuples)]
             
     @cache # Add ability to strip units (not done in base class in case it would invalidate a cache)
     def get_data(self, rng=None, strip_units=False):
@@ -827,35 +878,39 @@ class EnumerableDataset(Dataset):
 #         \Biggr]
 # $$
 #
-# Let $\comp_k(\M, π) := \log \Bigl[
+# Let $\comp_{k'}(\M, π) := \log \Bigl[
 #         \sum_{k=0}^{k'} \Braket{e^{\log \lvert \iI_k \rvert + l(\vec{i})}}_{\sum \vec{i} = k} \Bigr]$ denote the estimated complexity after truncating the sum at $k'$. The relative error we make is bounded by
 #
 # $$
-# \frac{\comp(\M, π) - \comp_k(\M, π)}{\comp(\M, π)}
+# \frac{\comp(\M, π) - \comp_{k'}(\M, π)}{\lvert\comp(\M, π)\rvert}
 # &< \frac{\log\Biggl[
 #         1 + \frac{\Braket{e^{l(\vec{i})}}_{\sum \vec{i} = k'} \sum_{k=k'+1}^{K} \lvert \iI_k \rvert}
 #                         {\sum_{k=0}^{k'} \Braket{e^{\log \lvert \iI_k \rvert + l(\vec{i})}}_{\sum \vec{i} = k}}
 #         \Biggr]}
-#         {\comp_{k'}(\M, π)} \\
+#         {\lvert\comp_{k'}(\M, π)\rvert} \\
 # &= \frac{\log\biggl[
 #         1 + \frac{\exp(\mathtt{avg\_lk'})}{\exp(\comp_{k'}(\M, π))}
 #                   \sum_{k=k'+1}^{K} \lvert \iI_k \rvert
 #         \biggr]}
-#         {\comp_{k'}(\M, π)} \\
+#         {\lvert\comp_{k'}(\M, π)\rvert} \\
 # &= \frac{\log\biggl[
 #         1 + \exp\Bigl(\mathtt{avg\_lk'} - \comp_{k'}(\M, π)
 #                       + \log \sum_{k=k'+1}^{K} \lvert \iI_k \rvert
 #                       \Bigr)
 #         \biggr]}
-#         {\comp_{k'}(\M, π)}
-# $$
+#         {\lvert\comp_{k'}(\M, π)\rvert}
+# $$ (eq_mdl_early-termination-ratio)
 #
 # The implementation below truncates by default when the relative error is 0.01%, giving us 4 significant digits.
 #
 # In practice, even in the worse cases, this approach allows to halve the computation time, since the multiplicities follow a binomial-like curve: symmetric, and maximum at $k=K/2$. Once we’ve computed the 50% largest terms, the number of remaining contributions quickly decreases and becomes negligible.
 # :::
+#
+# :::{margin}
+# The numerator is always positive, but the denominator can be negative ($\comp_{k'}$ is a logarithm, so its image technically spans all of $\RR$), especially for small $k'$. This is why in [](#eq_mdl_early-termination-ratio) we divide by $\lvert\comp_{k'}(\M, π)\rvert$ to ensure a positive ratio.
+# :::
 
-# %%
+# %% editable=true slideshow={"slide_type": ""} tags=[]
 def gen_representative_likelihoods(D: EnumerableDataset, r: int, m:int,
                                    fitΘ: Callable, logL: Callable, thresh=0.01, rng=None) \
     -> Generator[tuple[int, np.ndarray[float]]]:
@@ -863,20 +918,20 @@ def gen_representative_likelihoods(D: EnumerableDataset, r: int, m:int,
     #rep_l = []
     mp_process_id = multiprocessing.current_process()._identity  # Stores a tuple; parent has (), 1st level children (i,), 2nd level children (i,j), etc.
     progbar_offset = 0 if (len(mp_process_id) == 0) else 1 + mp_process_id[0]  # Add one to child processes to leave space for a progbar of the parent process
-    for (mult, _λ, ℬs) in tqdm(D.gen_representative_datasets(thresh, r=r, rng=rng),
-                               desc="index class", total=D.num_index_classes(thresh),
-                               position=progbar_offset):
+    for (_λ, ℬs) in tqdm(D.gen_representative_datasets(thresh, r=r, rng=rng),
+                         desc="index class", total=D.num_index_classes(thresh),
+                         position=progbar_offset):
         rep_lk = []
         for _ℬ in ℬs:
             σ, T, coeffs = fitΘ((_λ,_ℬ), m)
             rep_lk.append(logL(σ, T, coeffs)((_λ,_ℬ)).sum())
-        yield mult, np.array(rep_lk)
+        yield np.array(rep_lk)
         #rep_l.append(np.array(rep_lk))
         #mults.append(mult)
     #return mults, rep_l
 
 
-# %%
+# %% editable=true slideshow={"slide_type": ""} tags=[]
 def _comp(D: EnumerableDataset, r: int,  m: int, fitΘ: Callable, logL: Callable,
           value_thresh: float=0.01, rtol=0.01, cache_key=None, rng=None) -> float:
     """
@@ -897,16 +952,16 @@ def _comp(D: EnumerableDataset, r: int,  m: int, fitΘ: Callable, logL: Callable
     # We use a running update of the complexity to track when to stop the sum.
     # This is faster but less accurate than computing all at once with `logsumexp`.
     compk = -np.inf  # Log equivalent to initializing a sum accumulator at 0
-    for k, (_, rep_lk) in enumerate(gen_representative_likelihoods(
-                                        D, r, m, fitΘ, logL, value_thresh, rng)):
+    for k, rep_lk in enumerate(gen_representative_likelihoods(
+                                   D, r, m, fitΘ, logL, value_thresh, rng)):
         avg_l[k] = logsumexp(rep_lk - np.log(rep_lk.size))
         compk = np.logaddexp(compk, logmults[k] + avg_l[k])
         #abs_err = np.log1p(np.exp(avg_l[k] - compk) * n_remaining_terms[k])
         abs_err = np.logaddexp(1, avg_l[k] - compk + logn_remaining_terms[k])
-        if abs_err/compk < rtol:
+        if abs(abs_err/compk) < rtol:
             logger.info(f"Truncated complexity sum after {k+1}/{len(logmults)} terms, "
-                        f"representing 10^{logsumexp(logmults[:k])/math.log(2)}"
-                        f"/10^{logsumexp(logmults)/math.log(2)} datasets.")
+                        f"representing 10^{logsumexp(logmults[:k])/math.log(10)}"
+                        f"/10^{logsumexp(logmults)/math.log(10)} datasets.")
             break
 
     # Recalculate compk using logsumexp for better accuracy
@@ -919,11 +974,18 @@ def _comp(D: EnumerableDataset, r: int,  m: int, fitΘ: Callable, logL: Callable
 
 _cached_comp = memory.cache(_comp, ignore=["fitΘ", "logL"])
 
-# Small wrapper which skips caching if either `cache_key` or `rng` is none
+# Small wrapper which skips caching if either `cache_key` or `rng` is None
 @wraps(_comp)
 def comp(D: EnumerableDataset, r: int, m: int, fitΘ: Callable, logL: Callable,
-         value_thresh: float=0.01, rtol=0.01, cache_key=None, rng=None) -> float:
+         value_thresh: float=0.01, rtol=0.01, cache_key=None, rng=None,
+         no_compute: bool=False) -> float|None:
+    """
+    If `no_compute` is True, then the function only returns a float if a pre-computed
+    cached value is available. Otherwise it returns None.
+    """
     if cache_key is None or rng is None:
-        return _comp(D, r, m, fitΘ, logL, value_thresh, rtol, cache_key, rng)
+        return None if no_compute else _comp(D, r, m, fitΘ, logL, value_thresh, rtol, cache_key, rng)
     else:
-        return _cached_comp(D, r, m, fitΘ, logL, value_thresh, rtol, cache_key, rng)
+        in_cache =  _cached_comp.check_call_in_cache(D, r, m, fitΘ, logL, value_thresh, rtol, cache_key, rng)
+        return None if (no_compute and not in_cache) \
+               else _cached_comp(D, r, m, fitΘ, logL, value_thresh, rtol, cache_key, rng)

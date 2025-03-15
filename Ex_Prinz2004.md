@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.0
+    jupytext_version: 1.16.4
 kernelspec:
   display_name: Python (emd-paper)
   language: python
@@ -181,7 +181,7 @@ slideshow:
   slide_type: ''
 tags: [remove-cell]
 ---
-viz.save.update_figure_files = True
+viz.save.update_figure_files = False
 ```
 
 ```{code-cell} ipython3
@@ -2961,6 +2961,23 @@ glue("sigmai_weak_mean", **viz.formatted_quantity(EpistemicDist.σi_weak_mean ))
 glue("sigmai_strong_mean", **viz.formatted_quantity(EpistemicDist.σi_strong_mean))
 glue("sigmai_std"      , **viz.formatted_quantity(EpistemicDist.σi_std      ))
 ```
+
+    'AB/PD 3'
+    0.25
+    512
+    '2¹⁴'
+    4000
+    'copper'
+    '0.1 \\mathrm{ms}'
+    '0.2 \\mathrm{ms}'
+    '1.0 \\mathrm{ms}'
+    '2.0 \\mathrm{ms}'
+    '0.0 \\mathrm{mV}'
+    '1.0 \\mathrm{mV}'
+    '0.5 \\mathrm{mV}'
+    '-15.0 \\mathrm{mV}'
+    '-10.0 \\mathrm{mV}'
+    '0.5 \\mathrm{mV}'
 
 ```{code-cell} ipython3
 ---

@@ -15,7 +15,7 @@
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # (code_aleatoric-cannot-substitute-epistemic)=
-# # Code: Aleatoric cannot substitute epistemic uncertainty
+# # Code: Aleatoric vs Sampling vs Replication uncertainty
 #
 # {{ prolog }}
 #
@@ -90,7 +90,8 @@ import itertools
 hv.extension("matplotlib")
 
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
-memory = utils.NotebookMemory("./synced-joblib-data", cache_name="aleatoric-is-not-epistemic", verbose=0)
+#memory = utils.NotebookMemory("./synced-joblib-data", cache_name="aleatoric-is-not-epistemic", verbose=0)
+memory = utils.NotebookMemory("./data/aleatoric-is-not-epistemic", cache_name="aleatoric-is-not-epistemic", verbose=0)
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
 # (The `NotebookMemory` class specializes `joblib.Memory` to make the cache is portable across machines.)

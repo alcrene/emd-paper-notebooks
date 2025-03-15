@@ -1,6 +1,6 @@
 ---
 jupytext:
-  formats: ipynb,md:myst
+  formats: ipynb,md:myst,py:percent
   text_representation:
     extension: .md
     format_name: myst
@@ -53,6 +53,10 @@ import dataclasses
 import matplotlib as mpl
 #from myst_nb import glue
 from viz import glue
+```
+
+```{code-cell} ipython3
+import other_criteria
 ```
 
 ```{code-cell} ipython3
@@ -208,6 +212,10 @@ $$\begin{align}
 $\Bemd{}$ does not require specifying priors on the parameters or reserving test data.
 :::
 
+:::{note}
+We need to crank up the EMD sampling parameters here, because below we compute small tail probabilities.
+:::
+
 ```{code-cell} ipython3
 ---
 editable: true
@@ -221,8 +229,9 @@ def Bemd(𝒟):
     _mixed_ppf, _synth_ppf = get_ppfs(𝒟)
     _Bemd = emd.Bemd(_mixed_ppf["Planck"], _mixed_ppf["Rayleigh-Jeans"],
                      _synth_ppf["Planck"], _synth_ppf["Rayleigh-Jeans"],
-                     c=c, res=8, M=128,
-                     progbarA=None, progbarB=None)
+                     c=c, res=8, M=2**12, max_M=2**14, #M=128,
+                     progbarA=None, progbarB=None,
+                     use_multiprocessing=False)  # To allow computing multiple Bemd’s in parallel
     return Criterion(log(_Bemd), log(1-_Bemd))
 ```
 
@@ -393,19 +402,39 @@ We can then replace the probabilities with their logs and use `logsumexp` to get
 $$\log \eE_a \approx -L\log10 + \mathtt{scipy.special.logsumexp}\left(\logL_a^{(1)}, \logL_a^{(2)}, \dotsc \right)\mathtt{.mean()}\,,$$
 where $\logL_a^{(j)} = \logL_a(σ_j, T_j)$, $(σ_j, T_j) \sim  π(σ) π(T)$ and $j = 1, 2, \dotsc, L_{\eE}$.
 
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+    @memory.cache
+    def logℰ(a, 𝒟, πlogσ, πlogT):
+        Lℰ = 2**14   # Number of Monte Carlo samples for integral. Use giant number so result is effectively exact
+        rng = utils.get_rng("uv", "evidence")
+        return logsumexp([lₐ(a, σj, Tj, 𝒟)  # NB: We omit the `-L log 10`, which evenually drops out
+                          for σj, Tj in zip(exp(πlogσ.rvs(Lℰ, random_state=rng)), exp(πlogT.rvs(Lℰ, random_state=rng)))
+                         ])
+
 ```{code-cell} ipython3
----
-editable: true
-slideshow:
-  slide_type: ''
----
-@memory.cache
+# `other_criteria` expects a loss function which can be indexed as Q[θ]
+class QMeta(type):
+    def __getitem__(cls, Θ):
+        return Q(cls.physmodel, *Θ)
+    def __call__(cls, σ, T):
+        return Q(cls.physmodel, σ, T)
+class QPlanck(metaclass=QMeta):
+    physmodel="Planck"
+class QRJ(metaclass=QMeta):
+    physmodel="Rayleigh-Jeans"
+Qdict = {"Planck": QPlanck, "Rayleigh-Jeans": QRJ}
+```
+
+```{code-cell} ipython3
 def logℰ(a, 𝒟, πlogσ, πlogT):
-    Lℰ = 2**14   # Number of Monte Carlo samples for integral. Use giant number so result is effectively exact
-    rng = utils.get_rng("uv", "evidence")
-    return logsumexp([lₐ(a, σj, Tj, 𝒟)  # NB: We omit the `-L log 10`, which evenually drops out
-                      for σj, Tj in zip(exp(πlogσ.rvs(Lℰ, random_state=rng)), exp(πlogT.rvs(Lℰ, random_state=rng)))
-                     ])
+    π = other_criteria.FactorizedPrior(
+        distnames=[πlogσ.distname, πlogT.distname],
+        args=[πlogσ.args, πlogT.args],
+        rng = "uv - evidence"
+    )
+    logE, logEerr = other_criteria.logℰ(Qdict[a], π, 𝒟)
+    return logE
 ```
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
@@ -452,22 +481,28 @@ $\mathrm{elpd}$: Expected log pointwise predictive density, WAIC, LOO
 
   The $\mathrm{elpd}$ is closely related to the expected risk $R$; in fact, if we define $Q$ to be the log *posterior* instead of the log *likelihood*, it becomes equivalent.
 
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+    @memory.cache
+    def elpd(a, 𝒟, πlogσ, πlogT):
+        Lℰ = 2**14   # Number of Monte Carlo samples for integral. Use giant number so result is effectively exact
+        rng = utils.get_rng("uv", "elpd")
+        def h(σ, T, λ_ℬ, a=a, 𝒟=𝒟): return lₐ(a, σ, T, 𝒟) - Q(a, σ, T)(λ_ℬ)*base_e_to_x
+        σarr = exp(πlogσ.rvs(Lℰ, random_state=rng))
+        Tarr = exp(πlogT.rvs(Lℰ, random_state=rng))
+        λ_test, ℬ_test = replace(𝒟, L=Lᑊ, purpose="test").get_data()
+        return logsumexp(h(σarr, Tarr, (λ_test[:,None], ℬ_test[:,None])), axis=0
+                         ).mean() - logℰ(a, 𝒟, πlogσ, πlogT)  # NB: We omit constant terms
+
 ```{code-cell} ipython3
----
-editable: true
-slideshow:
-  slide_type: ''
----
-@memory.cache
 def elpd(a, 𝒟, πlogσ, πlogT):
-    Lℰ = 2**14   # Number of Monte Carlo samples for integral. Use giant number so result is effectively exact
-    rng = utils.get_rng("uv", "elpd")
-    def h(σ, T, λ_ℬ, a=a, 𝒟=𝒟): return lₐ(a, σ, T, 𝒟) - Q(a, σ, T)(λ_ℬ)*base_e_to_x
-    σarr = exp(πlogσ.rvs(Lℰ, random_state=rng))
-    Tarr = exp(πlogT.rvs(Lℰ, random_state=rng))
-    λ_test, ℬ_test = replace(𝒟, L=Lᑊ, purpose="test").get_data()
-    return logsumexp(h(σarr, Tarr, (λ_test[:,None], ℬ_test[:,None])), axis=0
-                     ).mean() - logℰ(a, 𝒟, πlogσ, πlogT)  # NB: We omit constant terms
+    π = other_criteria.FactorizedPrior(
+        distnames=[πlogσ.distname, πlogT.distname],
+        args=[πlogσ.args, πlogT.args],
+        rng = "uv - evidence"
+    )
+    elpd_value, elpd_stderr = other_criteria.elpd(Qdict[a], π, 𝒟, purpose="uv - elpd")
+    return elpd_value
 ```
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
@@ -581,28 +616,113 @@ def BR(𝒟): return Criterion(-R("Planck", 𝒟), -R("Rayleigh-Jeans", 𝒟))
 (code_uv-comparison-table)=
 ## Comparison table
 
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
+
+Precompute the $\Bemd{}$ with multiprocessing and populate the joblib cache.
+
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
+
+```python
+import multiprocessing as mp
+import psutil
+
+Bkey = r"$\underline{B}^{\mathrm{EMD}}_{\mathrm{P,RJ}}$"
+cores = min(psutil.cpu_count(logical=False), len(dataset_list))
+def compute_Bemd(*args): return Bemd(*args)  # Workaround b/c the joblib decorator on Bemd prevents pickling
+with mp.Pool(cores) as pool:
+    for _ in tqdm(pool.imap_unordered(compute_Bemd, dataset_list), total=len(dataset_list)):
+        pass
+print("Done precomputing Bemd")
+```
+
 ```{code-cell} ipython3
 ---
 editable: true
 slideshow:
   slide_type: ''
 ---
-df = pd.DataFrame({(f"{𝒟.λmin.m}–{𝒟.λmax.m}", 𝒟.L, 𝒟.B0.m, 𝒟.s.m, noise_fraction[𝒟.B0, 𝒟.s].m):
-                   {r"$\underline{B}^{\mathrm{EMD}}_{\mathrm{P,RJ}}$": Bemd(𝒟).logratio,
-                    r"$\underline{B}^R_{\mathrm{P,RJ}}$": BR(𝒟).logratio,
-                    r"$B^l_{\mathrm{P,RJ}}$": Bl(𝒟).logratio,
-                    r"$B^{\mathrm{Bayes}}_{\mathrm{P,RJ};π}$": BBayes(𝒟, π1logσ, π1logT).logratio,
-                    #r"$B^{\mathrm{Bayes}}_{\mathrm{P,RJ};π_2}$": BBayes(𝒟, π2logσ, π2logT).logratio,
-                    r"$B^{\mathrm{elpd}}_{\mathrm{P,RJ};π}$": Belpd(𝒟, π1logσ, π1logT).logratio,
-                    #r"$B^{\mathrm{elpd}}_{\mathrm{P,RJ};π_2}$": Belpd(𝒟, π2logσ, π2logT).logratio,
-                    }
-                   for 𝒟 in tqdm(dataset_list)})
+import shelve
+```
+
+```{code-cell} ipython3
+table_data = {}
+with shelve.open(str(config.paths.data/"criteria-compare-table")) as shelf:
+    for 𝒟 in tqdm(dataset_list):
+        Dkey = (f"{𝒟.λmin.m}–{𝒟.λmax.m}", 𝒟.L, 𝒟.B0.m, 𝒟.s.m, noise_fraction[𝒟.B0, 𝒟.s].m)
+        Dskey = ",".join(str(k) for k in Dkey)
+        table_data[Dkey] = {}
+
+        Bkey = r"$\underline{B}^{\mathrm{EMD}}_{\mathrm{P,RJ}}$"; Bskey = f"{Dskey},{Bkey}"
+        if Bskey not in shelf:
+            shelf[f"{Dskey},{Bkey}"] = Bemd(𝒟).logratio
+        table_data[Dkey][Bkey] = shelf[f"{Dskey},{Bkey}"]
+
+        Bkey=r"$\underline{B}^R_{\mathrm{P,RJ}}$" ; Bskey = f"{Dskey},{Bkey}"
+        if Bskey not in shelf:
+            shelf[f"{Dskey},{Bkey}"] = BR(𝒟).logratio
+        table_data[Dkey][Bkey] = shelf[f"{Dskey},{Bkey}"]
+
+        Bkey=r"$B^l_{\mathrm{P,RJ}}$"; Bskey = f"{Dskey},{Bkey}"
+        if Bskey not in shelf:
+            shelf[f"{Dskey},{Bkey}"] = Bl(𝒟).logratio
+        table_data[Dkey][Bkey] = shelf[f"{Dskey},{Bkey}"]
+
+        Bkey=r"$B^{\mathrm{Bayes}}_{\mathrm{P,RJ};π}$"; Bskey = f"{Dskey},{Bkey}"
+        if Bskey not in shelf:
+            shelf[f"{Dskey},{Bkey}"] = BBayes(𝒟, π1logσ, π1logT).logratio
+        table_data[Dkey][Bkey] = shelf[f"{Dskey},{Bkey}"]
+
+        #Bkey=r"$B^{\mathrm{Bayes}}_{\mathrm{P,RJ};π_2}$"; Bskey = f"{Dskey},{Bkey}"
+        # if Bskey not in shelf:
+        #     shelf[f"{Dskey},{Bkey}"] = BBayes(𝒟, π2logσ, π2logT).logratio
+        #table_data[Bkey] = shelf[f"{Dskey},{Bkey}"] = BBayes(𝒟, π2logσ, π2logT).logratio
+
+        Bkey=r"$B^{\mathrm{elpd}}_{\mathrm{P,RJ};π}$"; Bskey = f"{Dskey},{Bkey}"
+        if Bskey not in shelf:
+            shelf[f"{Dskey},{Bkey}"] = Belpd(𝒟, π1logσ, π1logT).logratio
+        table_data[Dkey][Bkey] = shelf[f"{Dskey},{Bkey}"]
+
+        #Bkey=r"$B^{\mathrm{elpd}}_{\mathrm{P,RJ};π_2}$"; Bskey = f"{Dskey},{Bkey}"
+        # if Bskey not in shelf:
+        #     shelf[f"{Dskey},{Bkey}"] = Belpd(𝒟, π2logσ, π2logT).logratio
+        #table_data[Bkey] = shelf[f"{Dskey},{Bkey}"] = Belpd(𝒟, π2logσ, π2logT).logratio    
+```
+
+```{raw-cell}
+---
+editable: true
+raw_mimetype: ''
+slideshow:
+  slide_type: ''
+tags: [active-py, remove-cell]
+---
+import sys; sys.exit()
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+---
+#df = pd.DataFrame({(f"{𝒟.λmin.m}–{𝒟.λmax.m}", 𝒟.L, 𝒟.B0.m, 𝒟.s.m, noise_fraction[𝒟.B0, 𝒟.s].m):
+#                   {r"$\underline{B}^{\mathrm{EMD}}_{\mathrm{P,RJ}}$": Bemd(𝒟).logratio,
+#                    r"$\underline{B}^R_{\mathrm{P,RJ}}$": BR(𝒟).logratio,
+#                    r"$B^l_{\mathrm{P,RJ}}$": Bl(𝒟).logratio,
+#                    r"$B^{\mathrm{Bayes}}_{\mathrm{P,RJ};π}$": BBayes(𝒟, π1logσ, π1logT).logratio,
+#                    #r"$B^{\mathrm{Bayes}}_{\mathrm{P,RJ};π_2}$": BBayes(𝒟, π2logσ, π2logT).logratio,
+#                    r"$B^{\mathrm{elpd}}_{\mathrm{P,RJ};π}$": Belpd(𝒟, π1logσ, π1logT).logratio,
+#                    #r"$B^{\mathrm{elpd}}_{\mathrm{P,RJ};π_2}$": Belpd(𝒟, π2logσ, π2logT).logratio,
+#                    }
+#                   for 𝒟 in tqdm(dataset_list)})
+df = pd.DataFrame.from_dict(table_data)
 df.columns.names=["λ", "L", "B0", "s", "rel. σ"]
 df.index.name = "Criterion"
 
-df = df.stack(["λ", "L"])
+df = df.stack(["λ", "L"], future_stack=True)
 # Put biased data before unbiased, to match figure
-df = df.sort_index(axis="columns", ascending=[False, True])
+df = df.sort_index(axis="columns", ascending=[False, True]) \
+       .sort_index(axis="index", ascending=True)
 ```
 
 ```{code-cell} ipython3
@@ -728,7 +848,7 @@ caption = r"""
 \@cref{fig_uv-example_r-distributions}. Criteria compare the Planck model ($\MP$) against the 
 Rayleigh-Jeans model ($\MRJ$) and are evaluated for different dataset sizes
 ($L$), different levels of noise ($s$) and different wavelength windows ($λ$).
-To allow for comparisons, all criteria have been transformed into ratios of probabilities (see \@cref{eq_def_Bemd-BR-table__emd,eq_def_Bemd-BR-table__R}).
+To allow for comparisons, all criteria have been transformed into ratios of probabilities.
 \textbf{Values reported are the $\log_{10}$ of those ratios.}
 Positive (blue shaded) values indicate evidence in favour of the Planck model, while negative (red shaded) values indicate the converse.
 For example, a value of +1 is interpreted as $\MP$ being 10 times more likely than $\MRJ$,
@@ -743,7 +863,7 @@ hence higher positive values are expected for zero bias, low noise, and the \qty
 As in \@cref{fig_uv-example_r-distributions}, calculations were done for both positive
 and null bias conditions (resp. ($\mathcal{B}_0 > 0$ and $\mathcal{B}_0 = 0$);
 the former emulates a situation where neither model can fit the data perfectly.
-Expressions for all criteria are given in \@cref{app_expressions-other-criteria}.
+Expressions for all criteria are given in the supplementary text.
 For the $\underline{B}^{\mathrm{EMD}}_{\mathrm{P,RJ}}$ criteria, we used $c=\num{«c_chosen»}$.
 Although this is the same value as we used for neuron model, it was determined through a separate calibration with different epistemic distributions.
 """ \

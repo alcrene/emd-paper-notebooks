@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.4
+#       jupytext_version: 1.15.0
 #   kernelspec:
 #     display_name: Python (emd-paper)
 #     language: python
@@ -50,23 +50,31 @@
 import re
 import dataclasses
 import logging
+import multiprocessing
 from functools import cached_property, cache, partial
-import matplotlib as mpl
-#from myst_nb import glue
-#from viz import glue
+from typing import Literal
+from tqdm.auto import tqdm
 
 logger = logging.getLogger(__name__)
 
-# %%
+# %% editable=true slideshow={"slide_type": ""}
 from joblib import Memory
+import psutil
 
 memory = Memory(".joblib-cache", verbose=0)
+ncores = min(psutil.cpu_count(logical=False), 64)
+# ncores = max(2, min(psutil.cpu_count(logical=False)-4, 100))
 
-# %%
+# %% editable=true slideshow={"slide_type": ""}
 import numpy as np
 from scipy import stats
+import dynesty
+import xarray
+import arviz
 
 import emd_falsify as emd
+
+import matplotlib as mpl
 
 import utils
 
@@ -153,9 +161,9 @@ class Criterion:
 # :::
 
 # %%
-def get_ppfs(𝓜, 𝒟, rng=None, L_synth=2**12):
+def get_ppfs(𝓜, 𝒟, rng=None, L_synth=2**14):
     mixed_ppf = emd.make_empirical_risk_ppf(𝓜.Q(𝒟.get_data()))
-    synth_ppf = emd.make_empirical_risk_ppf(𝓜.Q(𝓜.gen_data(L_synth, rng=rng)))
+    synth_ppf = emd.make_empirical_risk_ppf(𝓜.Q(𝓜.gen_data(L_synth, λmin=𝒟.λmin, λmax=𝒟.λmax, rng=rng)))
     return mixed_ppf, synth_ppf
 
 
@@ -190,16 +198,16 @@ def Bemd(𝒟):
 #   To assign a likelihood to a model, some criteria use $\max_{Θ} \logL_a(Θ)$; i.e. they evaluate the at the fitted parameters. In the following we denote this $\logL_a(\hat{Θ})$.
 
 # %% editable=true slideshow={"slide_type": ""}
-def 𝓁(Q, Θ, 𝒟):
-    return -Q[Θ](𝒟.get_data()).sum().squeeze() * base_e_to_2
+def 𝓁(Θ, Q, 𝒟):
+    return -Q[Θ](𝒟.get_data()).sum().squeeze()
 
 
-# %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
-def 𝓁(Q, Θ, 𝒟):  # This version can deal with larger datasets, by splitting the data into manageable chunks
+# %% editable=true slideshow={"slide_type": ""}
+def 𝓁(Θ, Q, 𝒟):  # This version can deal with larger datasets, by splitting the data into manageable chunks
     x, y = 𝒟.get_data()
     w = 2**12
     return sum(
-        -Q[Θ]((x[i*w:(i+1)*w], y[i*w:(i+1)*w])).sum().squeeze() * base_e_to_2
+        -Q[Θ]((x[i*w:(i+1)*w], y[i*w:(i+1)*w])).sum().squeeze()
         for i in range(int(np.ceil(len(x)/w)))
     )
 
@@ -243,7 +251,7 @@ def R(Q, Θ, 𝒟, Lᑊ=2**12, purpose="expected risk"):
 # ~ __Important__ `expect` can average any function $f$ over the prior, but that function must be provided as $\log_2 f$ (i.e. it must return the _logarithm base 2_ the function we actually want to average).
 #   This allows us to use `logaddexp2` to minimize rounding errors. The use of base 2 instead of $e$ is not only much more computationally efficient, but also reduces rounding errors.
 
-# %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
+# %% editable=true slideshow={"slide_type": ""}
 # FactorizedPrior
 # To use joblib.Memory, we need objects which can be hashed & pickled consistently
 # Stats distributions don’t do this, but we can store their arguments instead
@@ -256,6 +264,12 @@ class FactorizedPrior:
     distnames: list[str]
     args: list[tuple]
     rng: int|str|tuple[int|str]
+
+    def __and__(self, other: 'FactorizedPrior'):
+        return FactorizedPrior(self.distnames + other.distnames,
+                               self.args + other.args,
+                               self.rng + other.rng)
+    
     @cached_property  # cached property avoids resetting the RNG to the same value
     def rv_list(self):
         _rv_list = []
@@ -264,11 +278,17 @@ class FactorizedPrior:
             rv.random_state = utils.get_rng(self.rng, i)
             _rv_list.append(rv)
         return _rv_list
-    def rvs(self, *args, **kwargs): return np.stack([rv.rvs(*args, **kwargs) for rv in self.rv_list]).T
-    def pdf(self, x, *args, **kwargs): return np.prod([rv.pdf(xi, *args, **kwargs)
-                                                       for xi, rv in zip(np.atleast_2d(x).T, self.rv_list)], axis=0)
-    def logpdf(self, x, *args, **kwargs): return np.sum([rv.logpdf(xi, *args, **kwargs)
-                                                         for xi, rv in zip(np.atleast_2d(x).T, self.rv_list)], axis=0)
+    def rvs(self, size=1, random_state=None): return np.stack([rv.rvs(size=size, random_state=random_state)
+                                                               for rv in self.rv_list]).T
+    def pdf(self, x): return np.prod([rv.pdf(xi)
+                                      for xi, rv in zip(np.atleast_2d(x).T, self.rv_list)], axis=0)
+    def logpdf(self, x): return np.sum([rv.logpdf(xi)
+                                        for xi, rv in zip(np.atleast_2d(x).T, self.rv_list)], axis=0)
+    @property
+    def prior_transform(self):
+        def prior_transform(u):
+            return np.array([rv.ppf(ui) for ui, rv in zip(u, self.rv_list)])
+        return prior_transform
     def _avg_M2(self, log2f, args=(), rtol=2**-6, Lπ_min=2**10, num_doublings=6):
         """
         Return an estimate of the mean and of the sum of squared differences of f under the prior.
@@ -334,11 +354,63 @@ class FactorizedPrior:
 # ~ The Bayesian model evidence is obtained by marginizaling the likelihood over the prior.
 #   $$\eE_a = \int\!dπ(Θ)\, \logL_a(Θ) = \EE_π\bigl[ \logL_a(Θ) \bigr] \,.$$
 
-# %% editable=true slideshow={"slide_type": ""}
-@memory.cache
-def logℰ(Q, π, 𝒟):
-    return np.log(π.expect(partial(𝓁, Q, 𝒟=𝒟)))
+# %% [markdown] editable=true slideshow={"slide_type": ""}
+# An initial attempt to compute evidence by Monte Carlo fails, because even in this simple example, the likelihood is too peaked: none (or not enough) of the samples are drawn in the high-probability region.
+# ```python
+#     @memory.cache
+#     def logℰ(Q, π, 𝒟):
+#         return np.log(π.expect(partial(𝓁, Q=Q, 𝒟=𝒟)))
+# ```
+# Instead we use [dynesty](https://dynesty.readthedocs.io), a package specialized for computed the model evidence using slice sampling. Slice sampling goes through a series of refinements, to locate the mode(s) of the posterior and focus the samples on those regions.
 
+# %% editable=true slideshow={"slide_type": ""}
+@memory.cache(ignore=["ncores"])
+def sample_posterior(Q, π, 𝒟, dlogz=0.01, nlive=1024, sample='rwalk', enlarge=1.25, bootstrap=0, ncores=ncores):
+    """
+    Sample the posterior using slice sampling (specifically with Dynesty).
+    The resulting samples can be used for evaluating both the model evidence
+    and, after uniform resampling, more usual Bayesian statistics like WAIC and posterior variance.
+    
+    Optional arguments are passed on to `dynesty.NestedSampler`; the defaults define
+    a more robust and accurate sampler than the dynesty defaults. This allows it to
+    accommodate a more complex posterior, at the cost of longer convergence times.
+
+    .. Hint:: The dynesty documentation recommends that `nlive` be an integer multiple
+       of the number of cores.
+    """
+    with dynesty.pool.Pool(ncores, 𝓁, π.prior_transform) as pool:
+        sampler = dynesty.NestedSampler(pool.loglike, pool.prior_transform,
+                                        logl_kwargs={'Q':Q, 'D':𝒟},
+                                        ndim=π.rvs().size, pool=pool,
+                                        nlive=nlive, sample=sample, enlarge=enlarge, bootstrap=bootstrap)
+        sampler.run_nested(print_progress=False, dlogz=dlogz)
+            # Within a tqdm loop, the default print_func spams the console (it prints below the old progress, instead of on top of it)
+            #   Possible solution: set up our own tqdm progbar, and pass it as the `pbar` argument to dynesty.results.print_fn
+        return sampler.results
+
+
+# %% editable=true slideshow={"slide_type": ""}
+def logℰ(Q, π, 𝒟) -> tuple[float, float]:
+    """
+    Returns estimate of the log evidence and the standard error on that estimate,
+    as computed by `dynesty` during sampling.
+
+    The standard de
+    """
+    dynres = sample_posterior(Q, π, 𝒟)
+    return dynres.logz[-1], dynres.logzerr[-1]
+
+
+# %% [markdown] editable=true slideshow={"slide_type": ""}
+# ::::{margin}
+# :::{note}
+# Dynesty documents `logzerr` both as the approximate error on `logz`, but also as its standard deviation.
+# AFAICT they actually mean its standard *error*; at least `logzerr` is the quantity they use for the "+/-" uncertainty in the progress display, so clearly this is how they interpret it.
+#
+# Possibly confusing at first is that the sequence of `logzerr` is monotonically _increasing_.
+# This is because it is estimated as the cumulative uncertainty (on the log z) for the contribution to the evidence from each slice. Once a slice is “frozen”, we no longer add samples to it, and therefore the uncertainty on its total evidence does not decrease.
+# :::
+# ::::
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # $\mathrm{elpd}$: Expected log pointwise predictive density, WAIC, LOO
@@ -359,9 +431,9 @@ def logℰ(Q, π, 𝒟):
 #       &= α' \int\!dπ(Θ)\, p\bigl(y_j' | x_j', Θ\bigr) p(x_j) \; \, p(\{y_i\} | \{x_i\}, Θ) p(\{x_i\}) \\ 
 #       &= α \int\!dπ(Θ)\, p\bigl(y_j' | x_j', Θ\bigr)  \; p(\{y_i\} | \{x_i\}, Θ) && \quad\text{where} & α &:= \frac{p(x_j)p(\{x_i\}) }{p(\{x_i, y_i\})}  \\
 #   \mathrm{elpd}_a &\approx \frac{1}{L'} \sum_{j=1}^{L'} \log p\bigl(x_j', y_j' | \{x_i, y_i\}\bigr) \\
-#       &= \frac{1}{L'} \sum_{j=1}^{L'} \log \Biggl[ α \int\!dπ(Θ)\, p\bigl(y_j' | Θ\bigr)\, p(\{y_i\} | Θ) \Biggr] \\
-#       &= \frac{1}{L'} \sum_{j=1}^{L'} \log \Bigl[ π.\mathtt{expect}\Bigl[\log_2 p\bigl(y_j' | Θ\bigr) + \log_2 p(\{y_i\} | Θ)\Bigr] \Bigr] + \frac{\log α}{L'} && \Bigl( π.\mathtt{expect} \text{ assumes log-transformed argument } \Bigr) \\
-#       &= \frac{1}{L'} \sum_{j=1}^{L'} \log \Bigl[ π.\mathtt{expect}\Bigl[\log p\bigl(y_j' | Θ\bigr) + \underbrace{\log p(\{y_i\} | Θ)}_{\logL(Θ]} \bigm/ \log 2 \Bigr] \Bigr] + \frac{\log α}{L'}
+#       &= \frac{1}{L'} \sum_{j=1}^{L'} \log \Biggl[ α \int\!dπ(Θ)\, p\bigl(y_j' | x_j' Θ\bigr)\, p(\{y_i\} | \{x_i\} Θ) \Biggr] \\
+#       &= \frac{1}{L'} \sum_{j=1}^{L'} \log \Bigl[ π.\mathtt{expect}\Bigl[\log_2 p\bigl(y_j' | x_j', Θ\bigr) + \log_2 p(\{y_i\} | \{x_i\}, Θ)\Bigr] \Bigr] + \frac{\log α}{L'} && \mathrlap{\Bigl( π.\mathtt{expect} \text{ assumes log-transformed argument } \Bigr)} \\
+#       &= \frac{1}{L'} \sum_{j=1}^{L'} \log \Bigl[ π.\mathtt{expect}\Bigl[\log p\bigl(y_j' | x_j', Θ\bigr) + \underbrace{\log p(\{y_i\} | \{x_i\}, Θ)}_{\logL(Θ]} \bigm/ \log 2 \Bigr] \Bigr] + \frac{\log α}{L'}
 #   \end{aligned}$$
 #
 
@@ -374,59 +446,127 @@ def logℰ(Q, π, 𝒟):
 #   Since the Rayleigh-Jeans and Planck models both have the same number of parameters, this is equivalent to the likelihood ratio (up to a factor of 2).
 
 # %%
-def AIC(Q, Θ, 𝒟)   : return -2*𝓁(Q, Θ, 𝒟) + 2*len(Θ)
-
-
-# %%
-def BIC(Q, Θ, 𝒟)   : return -2*𝓁(Q, Θ, 𝒟) + 𝒟.L*len(Θ)
-
-
-# %%
-def DIC(Q, Θ, π, 𝒟): return -2*𝓁(Q, Θ, 𝒟) + 4*π.variance(partial(𝓁, Q, 𝒟=𝒟))
-
-
-# %%
-def elpd(Q, π, 𝒟, Lᑊ=4, purpose="elpd"):
-    # Collecting multiple param draws before summing them allows to sort and reduce rounding errors
-    Lπ = 1024
-    # Lᑊ=4
-    # #Lπ = 1024
-    # Lπ = 10
-    # purpose="elpd"
-    
-    𝒟test = replace(𝒟, L=Lᑊ, purpose=f"{𝒟.purpose} - {purpose}")
-    xytest = 𝒟test.get_data()
-
-    pd = np.zeros(Lᑊ, dtype=float)  # posterior density
-    lpd_chunk = np.zeros((Lπ, Lᑊ), dtype=float)  # collect multiple param draws before summing them
-
-    for k, Θ in enumerate(π.rvs(size=Lπ)):
-        # NB: We rely here on the choice of Q = -log p(y | x, θ)
-        _Q = Q[Θ]
-        𝓜 = CandidateModel(*Θ, ())
-        #print(𝓜.physmodel(xytest)[1].m)
-        #print(𝓜.Q(xytest))
-        lpd_chunk[k] = -_Q(xytest) - _Q(𝒟.get_data()).sum().squeeze()
-    pd_chunk = np.exp(lpd_chunk)
-    #pd_chunk.sort(axis=0)
-    pd += pd_chunk.mean(axis=0)
-    
-    pd.sort()
-    return np.mean(np.log(pd))
+# NB: We can’t just use len(Θ) because Θ may contain lists
+def num_params(Θ): return sum(1 for _ in utils.flatten(Θ))
 
 
 # %% editable=true slideshow={"slide_type": ""}
-@memory.cache
-def elpd(a, 𝒟, πlogσ, πlogT):
-    Lℰ = 2**14   # Number of Monte Carlo samples for integral. Use giant number so result is effectively exact
-    rng = utils.get_rng("uv", "elpd")
-    def h(σ, T, λ_ℬ, a=a, 𝒟=𝒟): return lₐ(a, σ, T, 𝒟) - Q(a, σ, T)(λ_ℬ)*base_e_to_2
-    σarr = exp(πlogσ.rvs(Lℰ, random_state=rng))
-    Tarr = exp(πlogT.rvs(Lℰ, random_state=rng))
-    λ_test, ℬ_test = replace(𝒟, L=Lᑊ, purpose="test").get_data()
-    return logsumexp(h(σarr, Tarr, (λ_test[:,None], ℬ_test[:,None])), axis=0
-                     ).mean() - logℰ(a, 𝒟, πlogσ, πlogT)  # NB: We omit constant terms
+def AIC(Q, Θ, 𝒟)   : return -2*𝓁(Θ, Q, 𝒟) + 2*num_params(Θ)
 
+
+# %% editable=true slideshow={"slide_type": ""}
+def BIC(Q, Θ, 𝒟)   : return -2*𝓁(Θ, Q, 𝒟) + np.log(𝒟.L)*num_params(Θ)
+
+
+# %% editable=true slideshow={"slide_type": ""}
+#@memory.cache
+def DIC(Q, Θ, π, 𝒟):
+    #return -2*𝓁(Θ, Q, 𝒟) + 4*π.variance(partial(𝓁, Q=Q, 𝒟=𝒟))
+    samples = sample_posterior(Q, π, 𝒟)
+    weights = samples.importance_weights()
+    var = (samples.logl**2).dot(weights) - samples.logl.dot(weights)**2
+    return -2*𝓁(Θ, Q, 𝒟) + 4*var
+
+
+# %% [markdown] editable=true slideshow={"slide_type": ""}
+# WAIC and PSIS-LOO-CV assume uniformly drawn MCMC samples. We _could_ use an MCMC sampler like *pymc* or *emcee*, but since we already run *dynesty*’s slice sampler to compute the model evidence, this seems wasteful.
+# Instead we subsample the log likelihood values returned by *dynesty* according to their probability, thus emulating what a uniform MCMC sampler would return.
+#
+# For the calculations themselves, we use the implementations [ArviZ.waic](https://python.arviz.org/en/stable/api/generated/arviz.waic.html) or [ArviZ.loo](https://python.arviz.org/en/stable/api/generated/arviz.loo.html). At least for PSIS-LOO-CV, this is the recommendation of that method’s [official implementation repo](PSIS-LOO-CV).
+#
+# ::::{margin}
+# :::{note}
+# For this simple model, it seems that both WAIC and PSIS-LOO-CV work well (no warning is raised) and give nearly identical results.
+# :::
+# ::::
+
+# %% [markdown] editable=true slideshow={"slide_type": ""}
+# :::{note} Difference with *dynesty*’s `resample_equal` function
+# :class: dropdown
+#
+# *dynesty* provides the `resample_equal` function which also generates an MCMC-like set of uniform samples. The difference is that `resample_equal` samples with replacement to create a new dataset of the same size as the original: so it generates a bigger dataset, but with repeated values.
+# I found that the estimated number of parameters using subsampling was more plausible (1.4 instead of 2.3), which is why I use this approach.
+# Ultimately this choice does not really matter, because the important values (elpd and its standard error) are effectively the same for both methods.
+# :::
+
+# %% editable=true slideshow={"slide_type": ""}
+@memory.cache
+def elpd(Q, π, 𝒟, purpose="elpd",
+         scale: Literal["log", "negative_log", "deviance"]="log",
+         method: Literal["waic", "loo"]="waic"
+        ) -> tuple[float, float]:
+    """
+    Return the elpd, estimated using either WAIC or PSIS-LOO-CV.
+    Returns:
+        estimated elpd
+        standard error
+    """
+    rng = utils.get_rng(purpose)
+    if method not in {"waic", "loo"}: raise ValueError(f"`method` must be either 'waic' or 'loo'. Received {method}")
+
+    dynresult = sample_posterior(Q, π, 𝒟)
+    select = rng.binomial(1, np.exp(dynresult.logl - dynresult.logl.max())).astype(bool)
+    θsamples = dynresult.samples[select]
+    #θsamples = dynresult.samples_equal()
+
+    # Massage the log likelihood data into the form expected by ArviZ.
+    # Note that we want pointwise log likelihoods, so neither can we use the values in dynresult.logl nor our own log likelihood function 𝓁
+    logL_dataset = xarray.Dataset(
+        {"logL": (["chain", "draw", "B"], [[-Q[θ](𝒟.get_data()) for θ in θsamples]])},
+        coords = {"chain": (["chain"], [0]),
+                  "draw": (["draw"], np.arange(len(θsamples))),
+                  "B": (["B"], np.arange(𝒟.L)),
+                 }
+    )
+    idata = arviz.InferenceData(log_likelihood=logL_dataset)
+
+    if method == "waic":
+        elpd_res = arviz.waic(idata, pointwise=True, scale=scale)
+        return elpd_res.elpd_waic, elpd_res.se
+    else:
+        weights = np.exp(logL)
+        weights /= weights.sum()
+        reff = 1/(weights**2).sum() / len(weights)
+        elpd_res = arviz.loo(idata, pointwise=True, reff=reff, scale=scale)
+        return elpd_res.elpd_loo, elpd_res.se
+
+
+# %% [markdown] editable=true slideshow={"slide_type": ""}
+# :::{dropdown} Old implementation using direct expectation
+#
+# The idea here was to compute the elpd “directly”, to avoid possible confounds from the approximations inherent in other methods like WAIC or PSIS-LOO-CV.
+# Unfortunately direct evaluation of the integral is still too slow, even for this simple problem, and the Monte Carlo implementation below doesn’t draw enough samples from the high-probability region to produce an accurate estimate.
+#
+# ```python
+# # Functions must be defined in module scope in order to be pickleable
+# def h(Θ, xy, Q, 𝒟): return (𝓁(Θ, Q, 𝒟) - Q[Θ](xy)) * base_e_to_2
+# def lpd(xy, π, h): return π.expect(partial(h, xy=xy))
+#
+# @memory.cache
+# def elpd(Q, π, 𝒟, Lᑊ=16, purpose="elpd"):
+#     # Collecting multiple param draws before summing them allows to sort and reduce rounding errors
+#     #Lπ = 1024
+#     
+#     𝒟test = replace(𝒟, L=Lᑊ, purpose=f"{𝒟.purpose} - {purpose}")
+#     #xytest = 𝒟test.get_data()
+#
+#     #def h(Θ, xy): return (𝓁(Θ, Q, 𝒟) - Q[Θ](xy)) * base_e_to_2
+#     #def lpd(xy): return π.expect(partial(h, xy=xy))
+#     _lpd = partial(lpd, π=π, h=partial(h, Q=Q, D=𝒟))
+#
+#     args = tqdm(zip(*𝒟test.get_data()), desc="elpd test sample", total=Lᑊ)
+#     with multiprocessing.Pool(ncores) as pool:
+#         lpd_arr = np.fromiter(pool.imap_unordered(_lpd, args, chunksize=max(1, Lᑊ//8)),
+#                               dtype=float, count=Lᑊ)
+#     
+#     #lpd_arr = np.zeros(Lᑊ, dtype=float)
+#     #for j, (xj, yj) in tqdm(enumerate(zip(*𝒟test.get_data())), desc="elpd test sample"):
+#     #    lpd_arr[j] = π.expect(partial(h, xy=(xj, yj)))
+#
+#     lpd_arr.sort()
+#     return np.log(lpd_arr).mean()
+# ```
+# :::
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # $B^{\mathrm{Bayes}}$: Bayes factor

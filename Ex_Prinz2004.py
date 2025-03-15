@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.15.0
+#       jupytext_version: 1.16.4
 #   kernelspec:
 #     display_name: Python (emd-paper)
 #     language: python
@@ -115,7 +115,7 @@ memory = Memory(".joblib-cache")
 #config.emd.mp.max_cores = 2
 
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
-viz.save.update_figure_files = True
+viz.save.update_figure_files = False
 
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-cell", "active-ipynb"]
 # logger.setLevel(config.logging.level)
@@ -2295,6 +2295,24 @@ def get_color(a):
 # glue("sigmai_weak_mean", **viz.formatted_quantity(EpistemicDist.σi_weak_mean ))
 # glue("sigmai_strong_mean", **viz.formatted_quantity(EpistemicDist.σi_strong_mean))
 # glue("sigmai_std"      , **viz.formatted_quantity(EpistemicDist.σi_std      ))
+
+# %% [markdown]
+#     'AB/PD 3'
+#     0.25
+#     512
+#     '2¹⁴'
+#     4000
+#     'copper'
+#     '0.1 \\mathrm{ms}'
+#     '0.2 \\mathrm{ms}'
+#     '1.0 \\mathrm{ms}'
+#     '2.0 \\mathrm{ms}'
+#     '0.0 \\mathrm{mV}'
+#     '1.0 \\mathrm{mV}'
+#     '0.5 \\mathrm{mV}'
+#     '-15.0 \\mathrm{mV}'
+#     '-10.0 \\mathrm{mV}'
+#     '0.5 \\mathrm{mV}'
 
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-input"]
 emd.utils.GitSHA()

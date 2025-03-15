@@ -561,11 +561,43 @@ To help better differentiate the paths:
 - we limit ourselves to the window (0.5, 0.75). So effectively we start after the first two refinement steps ($2^{-2} = 0.25$).
 
 ```{code-cell} ipython3
-from emd_falsify.path_sampling import generate_path_hierarchical_beta
+from emd_falsify.path_sampling import generate_path_hierarchical_beta, draw_from_beta
 ```
 
 ```{code-cell} ipython3
 c_refine = 16
+```
+
+```{code-cell} ipython3
+import math
+import scipy
+from emd_falsify.path_sampling import f_mid, f
+def get_beta_rv(r: float, v: float) -> tuple[float]:
+    """
+    Return α and β corresponding to `r` and `v`.
+    This function is copied from the emd package’s documentation code.
+    """
+    # Special cases for extreme values of r
+    if r < 1e-12:
+        return scipy.stats.bernoulli(0)  # Dirac delta at 0
+    elif r > 1e12:
+        return scipy.stats.bernoulli(1)  # Dirac delta at 1
+    # Special cases for extreme values of v
+    elif v < 1e-8:
+        return get_beta_rv(r, 1e-8)
+    elif v > 1e4:
+        # (Actual draw function replaces beta by a Bernoulli in this case)
+        return scipy.stats.bernoulli(1/(r+1))
+    
+    # Improve initialization by first solving r=1 <=> α=β
+    x0 = scipy.optimize.brentq(f_mid, -5, 20, args=(v,))
+    x0 = (x0, x0)
+    res = scipy.optimize.root(f, x0, args=[math.log(r), v])
+    if not res.success:
+        logger.error("Failed to determine α & β parameters for beta distribution. "
+                     f"Conditions were:\n  {r=}\n{v=}")
+    α, β = np.exp(res.x)
+    return scipy.stats.beta(α, β)
 ```
 
 ```{code-cell} ipython3
@@ -574,16 +606,35 @@ end_points = qhat_curves[0].data.query("Φ == 0 or Φ == 0.5")
 qstart, qend = end_points["q"]                                   # so it doesn’t really matter which one we pick
 Φstart, Φend = end_points["Φ"]
 curves = []
+densities = []
 curves.append(hv.Curve([(Φstart, qstart), (Φend, qend)], label=r"$\Delta \Phi = 2^{{-1}}$", kdims=[dims.Φ], vdims=[dims.q]))
-for res in [1, 2, 3, 4, 6]:
+for res in [1, 2, 3]:#, 4, 6]:
+    # Draw a realisation q at this refinement step
     rng = utils.get_rng("pedag", "qpaths", 1)
     Φ, q = generate_path_hierarchical_beta(
         mixed_ppf, δemd, c_refine, qstart, qend, res, rng, Phistart=Φstart, Phiend=Φend)
     curves.append(hv.Curve(zip(Φ, q), label=r"$\Delta \Phi = 2^{{"+f"-{res+1}"+"}}$", kdims=[dims.Φ], vdims=[dims.q]))
-```
-
-```{code-cell} ipython3
-Φarr = np.linspace(Φstart, Φend)
+    # For each of the new steps which were drawn, reconstruct the beta distribution used to sample that step
+    if res <= 3:
+        # (Code copied from definition of `generate_path_hierarchical_beta`)
+        qsarr = mixed_ppf(Φ)
+        Mvar = c_refine * δemd(Φ)**2
+        i = (np.arange(2**res))[::2] + 1
+        Δi = 1
+        d = q[i+Δi] - q[i-Δi]
+        r = (qsarr[i] - qsarr[i-Δi]) / (qsarr[i+Δi]-qsarr[i])  # Ratio of first/second increments
+        v = 2*Mvar[i]
+        for _i, _d, _r, _v in zip(i, d, r, v):
+            rv = get_beta_rv(_r, _v)
+            domain = np.linspace(0, 1, 100)
+            densities.append(hv.Area((q[_i-Δi] + _d * domain, rv.pdf(domain)),
+                                      label=f"{res=}, pos={_i}"))
+        rng2 = utils.get_rng("pedag", "qpaths", "betas", res)
+        samples = q[i-Δi] + d * draw_from_beta(r, v, rng=rng2, n_samples=10_000).T
+        for _i, _s in zip(i, samples.T): # One per step
+            key = f"{res=}, pos={_i}"
+            #densities.append(hv.Distribution(_s, label=key))
+            print("percentile of realisation:", np.searchsorted(np.sort(_s), q[_i]) / len(_s))
 ```
 
 One reason we need to set $c$ quite high to separate the paths is the monotonicity constraint, which strongly limits how far $q$ can deviate.
@@ -612,7 +663,7 @@ panels[-1] = ov.relabel(group="Bottom")
 layout_refinement = hv.Layout(panels)
 xticks = np.arange(2**2 + 1) / 2**3
 xformatter = lambda x: str(x) if x%2**-2==0 else ""
-yticks = [-6.85, -6.8, -6.75]
+yticks = [-6.85, -6.8, -6.75, -6.7]
 layout_refinement.opts(
     #hv.opts.Curve(color=hv.Cycle(["#CCCCCC", "#BBBBBB", "#AAAAAA", "#999999", "#888888", "#666666", "#444444", "#222222", "#000000"])),
     #hv.opts.Curve(color=hv.Palette("YlOrBr", range=(0.1, .65), reverse=True)),
@@ -635,6 +686,30 @@ layout_refinement.cols(1)
 
 ```{code-cell} ipython3
 viz.save(layout_refinement.cols(1), config.paths.figures/"pedag_qhat-refine_raw.svg")
+```
+
+Trying to plot the beta sampling distributions on top of the curves is a mess, especially with Holoviews’ no so solid support for violin plots.
+We would probably have to do the entire thing in matplotlib.
+
+_Much_ easier is to just plot the distributions separately, and add them ourselves in Inkscape.
+The key to lining them up accurately is to reused the _yticks_ from the curves above as the _xticks_ to the beta distributions. We can then rotate and align the axes in Inkscape.
+
+```{code-cell} ipython3
+beta_dists = hv.Layout(densities).opts(
+    hv.opts.Area(
+                         xticks=yticks, xlim=(q[0], q[-1]), yaxis=None,
+                         facecolor="#CCCCCC"),
+    #hv.opts.Distribution(
+    #                     xticks=yticks, xlim=(q[0], q[-1]), yaxis=None,
+    #                     edgecolor=None, facecolor="#CCCCCC"),
+    hv.opts.Layout(sublabel_format="", fig_inches=(3.5,1))
+                   #fig_inches=(0.965, 0.42))
+)
+beta_dists.cols(3)
+```
+
+```{code-cell} ipython3
+hv.save(beta_dists, config.paths.figures/"pedag_qhat-refine_beta-dists_raw.svg")
 ```
 
 ____________________________________________

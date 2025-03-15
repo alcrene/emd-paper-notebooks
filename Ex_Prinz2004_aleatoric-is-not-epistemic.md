@@ -15,7 +15,7 @@ kernelspec:
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
 (code_aleatoric-cannot-substitute-epistemic)=
-# Code: Aleatoric cannot substitute epistemic uncertainty
+# Code: Aleatoric vs Sampling vs Replication uncertainty
 
 {{ prolog }}
 
@@ -127,7 +127,8 @@ slideshow:
   slide_type: ''
 tags: [remove-cell]
 ---
-memory = utils.NotebookMemory("./synced-joblib-data", cache_name="aleatoric-is-not-epistemic", verbose=0)
+#memory = utils.NotebookMemory("./synced-joblib-data", cache_name="aleatoric-is-not-epistemic", verbose=0)
+memory = utils.NotebookMemory("./data/aleatoric-is-not-epistemic", cache_name="aleatoric-is-not-epistemic", verbose=0)
 ```
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
