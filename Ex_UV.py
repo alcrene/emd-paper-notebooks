@@ -988,7 +988,7 @@ def get_ppfs(_dataset, _fitted: None|Dict[str, FitResult]=None) -> tuple[Dict[st
 #
 # The takeaway from this verification is that a value `Linf=10000` ($\approx 2^{13}$) should be appropriate for the calibration.
 
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
+# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-output"]
 # Rvals_ppf = {"Rayleigh-Jeans": {}, "Planck": {}}
 # Rvals_avg = {"Rayleigh-Jeans": {}, "Planck": {}}
 # for model in Rvals_ppf:
@@ -1001,7 +1001,7 @@ def get_ppfs(_dataset, _fitted: None|Dict[str, FitResult]=None) -> tuple[Dict[st
 #             .get_data())
 #         ppf = emd.make_empirical_risk_ppf(q_list)
 #         Φ_arr = np.linspace(0, 1, _L+1)
-#         Rvals_ppf[model][_L] = scipy.integrate.simpson(ppf(Φ_arr), Φ_arr)
+#         Rvals_ppf[model][_L] = scipy.integrate.simpson(ppf(Φ_arr), x=Φ_arr)
 #         Rvals_avg[model][_L] = q_list.mean()
 
 # %% [markdown]

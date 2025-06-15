@@ -30,9 +30,14 @@ math:
     '\comp' : '\operatorname{COMP}'
 ---
 
-+++
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": []}
 
 # MDL (minimum description length) utility functions
+
+{{ prolog }}
+
+%{{ startpreamble }}
+%{{ endpreamble }}
 
 Specifically we compute MDL measures using _normalized maximum likelihood_, which for MDL is usually the preferred choice. (Although almost always an approximation is used to make it tractable.)
 
@@ -53,8 +58,8 @@ $$p^\NML(z^n) \propto \max_{θ \in Θ} p_θ(z^n) π(θ).$$
 In a sense, this is a more aggressive hypothesis (MAP instead of posterior), and therefore it needs a more aggressive normalization than the model evidence. In MDL this is achieved by integrating over _all possible datasets_ to obtain what is called the *model complexity*:
 
 $$
-p^\NML(z^n) &:= \frac{\max_{θ \in Θ} p_θ(z^n) π(θ)}{\int \max_{θ \in Θ} p_θ(z^n) π(θ) dz^n} 
-&= \frac{\max_{θ \in Θ} p_θ(z^n) π(θ)}{\comp(\M, π)} \,.
+p^\NML(z^n) := \frac{\max_{θ \in Θ} p_θ(z^n) π(θ)}{\int \max_{θ \in Θ} p_θ(z^n) π(θ) dz^n} 
+= \frac{\max_{θ \in Θ} p_θ(z^n) π(θ)}{\comp(\M, π)} \,.
 $$
 
 Note here that the integral over $z^n$ is agnostic to what the data actually look like.
@@ -98,7 +103,7 @@ Moreover, datasets with the same “index total” will have more similar likeli
 Those familiar with Lagrangian mechanics may find the following picture helpful. What we are doing is akin to starting from the function which maximizes the overall likelihood (index `(0, 0, …, 0)`). Then iterating through all possible variational changes, from smallest (just one impulse $δ_{ij}$ at one location) to largest (many impulses at many locations).
 :::
 
-+++
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": []}
 
 In practice there are still an unfeasibly large number of datasets – it would take years to generate all possible combinations of $\{\Bspec_{ji_j}\}$. Therefore instead of generating them all, we group them according to their total index – which we can check correlates strongly with their fitted likelihood.
 There are only $K := \sum_{j=1}^L \lvert \{\Bspec_j\} \rvert \sim 1000$ such groups, and we can estimate the average likelihood within each with $r \sim 30$ exemplars. Thus if we decompose the complexity into a sum over “index total” classes $\iI_k$, we can get a reasonable estimate from only about 30,000 sample datasets – something that can be done in a few minutes.
@@ -111,7 +116,7 @@ $$
 
 (In the expression, $\displaystyle \sum_{\vec{i}\sim \iI_k}^r$ means to draw $r$ samples $\vec{i}$ from $\iI_k$.)
 
-```{code-cell}
+```{code-cell} ipython3
 import logging
 import sys
 import itertools
@@ -150,13 +155,13 @@ where the approximation holds as long as $\bigl\lfloor\frac{x}{2^b}\bigr\rfloor 
 
 As a final optimization note, we use bitshifts (`x >> 30`) instead of integer division (`x // 2**30`), which are about 8x faster.
 
-```{code-cell}
+```{code-cell} ipython3
 def log(x, _convert_to_base_e=math.log2(math.exp(1)), _max_bit_length=sys.float_info.max_exp-1):
     d = max(0, x.bit_length() - _max_bit_length)
     return d/_convert_to_base_e + math.log(x >> d)
 ```
 
-```{code-cell}
+```{code-cell} ipython3
 ---
 editable: true
 slideshow:
@@ -181,7 +186,7 @@ assert log(400) == math.log(400)
 - all indices with a given total index;
 - all indices, ordered by their total index.
 
-```{code-cell}
+```{code-cell} ipython3
 def gen_idcs_with_total(sizes, tot_index) -> Generator[tuple[int]]:
     """
     Yield all indices for an array of size `sizes`
@@ -231,7 +236,7 @@ def gen_idcs_with_total(sizes, tot_index, remaining_index_space=None) -> Generat
 ```
 :::
 
-```{code-cell}
+```{code-cell} ipython3
 def gen_idcs_by_total(sizes) -> Generator[tuple[int]]:
     """
     Return a generator which acts like a nested `range` on `sizes`,
@@ -274,7 +279,7 @@ def gen_idcs_by_total(sizes) -> Generator[tuple[int]]:
 - Sample one index tuples uniformly from all index tuples that have total $k$.
 - Sample multiple random index tuples without replacement.
 
-```{code-cell}
+```{code-cell} ipython3
 def get_unif_idx(sizes, tot_index) -> np.ndarray[int]:
     """
     Return an index tuple which sums to `tot_index` and
@@ -301,7 +306,7 @@ def get_unif_idx(sizes, tot_index) -> np.ndarray[int]:
     return idx
 ```
 
-```{code-cell}
+```{code-cell} ipython3
 def get_rnd_idx(sizes, tot_index, rng=None) -> tuple[int]:
     """
     Return an index tuple which sums to `tot_index`,
@@ -317,7 +322,7 @@ def get_rnd_idx(sizes, tot_index, rng=None) -> tuple[int]:
     return tuple(idx)
 ```
 
-```{code-cell}
+```{code-cell} ipython3
 def get_multiple_rnd_idcs(sizes, tot_index, num, rng=None) \
     -> set[tuple[int]]:
     """
@@ -368,7 +373,7 @@ is symmetric.
 
 ### Simple recursive algorithm
 
-```{code-cell}
+```{code-cell} ipython3
 ---
 editable: true
 slideshow:
@@ -401,13 +406,13 @@ On the other hand, for $100 \lesssim k \lnapprox \sum_i s_j - L$, __the function
 +++
 
 :::{note}
-The basic idea of this algorithm is the same as the _“Simple Divide and Conquer”_ approach described by [Glück and Köppl](doi:10.1007/s00453-020-00713-7),
+The basic idea of this algorithm is the same as the _“Simple Divide and Conquer”_ approach described by [Glück and Köppl](https://doi.org/10.1007/s00453-020-00713-7),
 albeit the version here is even more naive.
 Glück and Köppl use a more clever scheme for splitting the size tuple, which likely results in fewer recursion steps than what we do here, although I have not checked this.
-(The “Divide and conquer” approach is already mention to in their earlier paper [(Glück et al., 2013)](doi:10.1007/978-3-642-38527-8_9), albeit with a less explicit description.)
+(The “Divide and conquer” approach is already mention to in their earlier paper [(Glück et al., 2013)](https://doi.org/10.1007/978-3-642-38527-8_9), albeit with a less explicit description.)
 :::
 
-```{code-cell}
+```{code-cell} ipython3
 ---
 editable: true
 slideshow:
@@ -501,7 +506,7 @@ def index_mult_enumerate(sizes, k):
 
 ### Polynomial algorithm (current state-of-the-art)
 
-A search of the literature turns up paper by [Glück et al (2013)](doi:10.1007/978-3-642-38527-8_9) (along with a [C++ implementation](https://github.com/koeppl/integer_partition) and follow-up paper by [Glück and Köppl (2020)](doi:10.1007/s00453-020-00713-7)).
+A search of the literature turns up paper by [Glück et al (2013)](https://doi.org/10.1007/978-3-642-38527-8_9) (along with a [C++ implementation](https://github.com/koeppl/integer_partition) and follow-up paper by [Glück and Köppl (2020)](https://doi.org/10.1007/s00453-020-00713-7)).
 
 Somewhat annoyingly, neither paper gives a complete, end-to-end description of the algorithm, leaving some parts only implicitely defined. (The follow-up paper does improve in this regard though.) It is therefore hard to say exactly how their algorithm works without implementing it ourselves, but from what I gather it is something like this:
 
@@ -631,7 +636,7 @@ def index_mult_reflect(S1: np.ndarray[int], S2: np.ndarray[int], mults_S1: np.nd
 ```
 :::
 
-```{code-cell}
+```{code-cell} ipython3
 def _index_logmult_reflect(S1: np.ndarray[int], S2: np.ndarray[int], logmults_S1: np.ndarray[float]
                            ) -> np.ndarray:
     """
@@ -680,7 +685,7 @@ def _index_logmult_reflect(S1: np.ndarray[int], S2: np.ndarray[int], logmults_S1
     return logmults_S2
 ```
 
-```{code-cell}
+```{code-cell} ipython3
 index_logmult_cache = {}
 def index_logmultiplicity(sizes: tuple[int,...], k: int) -> float:
     logmults = index_logmult_cache.get(sizes)
@@ -715,7 +720,7 @@ __Timing__: This takes about 90 seconds to execute on a size tuple of dimension 
 
 Confirm that the optimized version returns the same values.
 
-```{code-cell}
+```{code-cell} ipython3
 ---
 editable: true
 slideshow:
@@ -746,7 +751,7 @@ assert math.isclose(index_multiplicity((5,)*300, 1000), index_multiplicity_simpl
 If we decide to add this feature back as an option flag, it would be important to return _log_ multiplicities to avoid numerical overflows.
 :::
 
-```{code-cell}
+```{code-cell} ipython3
 @dataclass(frozen=True)
 class EnumerableDataset(Dataset):
     def value_sets(self, thresh=0.01):
@@ -941,7 +946,7 @@ In practice, even in the worse cases, this approach allows to halve the computat
 The numerator is always positive, but the denominator can be negative ($\comp_{k'}$ is a logarithm, so its image technically spans all of $\RR$), especially for small $k'$. This is why in [](#eq_mdl_early-termination-ratio) we divide by $\lvert\comp_{k'}(\M, π)\rvert$ to ensure a positive ratio.
 :::
 
-```{code-cell}
+```{code-cell} ipython3
 ---
 editable: true
 slideshow:
@@ -968,7 +973,7 @@ def gen_representative_likelihoods(D: EnumerableDataset, r: int, m:int,
     #return mults, rep_l
 ```
 
-```{code-cell}
+```{code-cell} ipython3
 ---
 editable: true
 slideshow:

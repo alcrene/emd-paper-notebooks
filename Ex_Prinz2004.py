@@ -17,7 +17,7 @@
 # ---
 # math:
 #     '\Bemd' : 'B_{#1}^{\mathrm{EMD}}'
-#     '\Bconf': 'B^{\mathrm{conf}}_{#1}'
+#     '\Bconf': 'B^{\mathrm{epis}}_{#1}'
 #     '\nN'   : '\mathcal{N}'
 #     '\Unif' : '\operatorname{Unif}'
 # ---
@@ -972,7 +972,7 @@ def generate_synth_samples(model: CandidateModel, L_synth: int=L_synth,
 #     # D = Qrisk.D(generate_synth_samples(candidate_models["D"]))
 # )
 
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
+# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-output"]
 # Rvals_ppf = {"A": {}, "B": {}, "C": {}, "D": {}}
 # Rvals_avg = {"A": {}, "B": {}, "C": {}, "D": {}}
 # nsamples_rng = utils.get_rng("prinz", "nsamples")
@@ -983,7 +983,7 @@ def generate_synth_samples(model: CandidateModel, L_synth: int=L_synth,
 #         q_list = nsamples_rng.choice(q_samples[model], _L)  # Bootstrap sampling with replacement
 #         ppf = emd.make_empirical_risk_ppf(q_list)
 #         Φ_arr = np.linspace(0, 1, _L+1)
-#         Rvals_ppf[model][_L] = integrate.simpson(ppf(Φ_arr), Φ_arr)
+#         Rvals_ppf[model][_L] = integrate.simpson(ppf(Φ_arr), x=Φ_arr)
 #         Rvals_avg[model][_L] = q_list.mean()
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "hide-input"]

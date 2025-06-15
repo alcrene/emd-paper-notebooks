@@ -30,8 +30,13 @@
 #     '\comp' : '\operatorname{COMP}'
 # ---
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=[]
 # # MDL (minimum description length) utility functions
+#
+# {{ prolog }}
+#
+# %{{ startpreamble }}
+# %{{ endpreamble }}
 #
 # Specifically we compute MDL measures using _normalized maximum likelihood_, which for MDL is usually the preferred choice. (Although almost always an approximation is used to make it tractable.)
 #
@@ -52,8 +57,8 @@
 # In a sense, this is a more aggressive hypothesis (MAP instead of posterior), and therefore it needs a more aggressive normalization than the model evidence. In MDL this is achieved by integrating over _all possible datasets_ to obtain what is called the *model complexity*:
 #
 # $$
-# p^\NML(z^n) &:= \frac{\max_{θ \in Θ} p_θ(z^n) π(θ)}{\int \max_{θ \in Θ} p_θ(z^n) π(θ) dz^n} 
-# &= \frac{\max_{θ \in Θ} p_θ(z^n) π(θ)}{\comp(\M, π)} \,.
+# p^\NML(z^n) := \frac{\max_{θ \in Θ} p_θ(z^n) π(θ)}{\int \max_{θ \in Θ} p_θ(z^n) π(θ) dz^n} 
+# = \frac{\max_{θ \in Θ} p_θ(z^n) π(θ)}{\comp(\M, π)} \,.
 # $$
 #
 # Note here that the integral over $z^n$ is agnostic to what the data actually look like.
@@ -96,7 +101,7 @@
 # Those familiar with Lagrangian mechanics may find the following picture helpful. What we are doing is akin to starting from the function which maximizes the overall likelihood (index `(0, 0, …, 0)`). Then iterating through all possible variational changes, from smallest (just one impulse $δ_{ij}$ at one location) to largest (many impulses at many locations).
 # :::
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=[]
 # In practice there are still an unfeasibly large number of datasets – it would take years to generate all possible combinations of $\{\Bspec_{ji_j}\}$. Therefore instead of generating them all, we group them according to their total index – which we can check correlates strongly with their fitted likelihood.
 # There are only $K := \sum_{j=1}^L \lvert \{\Bspec_j\} \rvert \sim 1000$ such groups, and we can estimate the average likelihood within each with $r \sim 30$ exemplars. Thus if we decompose the complexity into a sum over “index total” classes $\iI_k$, we can get a reasonable estimate from only about 30,000 sample datasets – something that can be done in a few minutes.
 #

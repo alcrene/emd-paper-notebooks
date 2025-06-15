@@ -17,7 +17,7 @@ kernelspec:
 ---
 math:
     '\Bemd' : 'B_{#1}^{\mathrm{EMD}}'
-    '\Bconf': 'B^{\mathrm{conf}}_{#1}'
+    '\Bconf': 'B^{\mathrm{epis}}_{#1}'
     '\nN'   : '\mathcal{N}'
     '\Unif' : '\operatorname{Unif}'
 ---
@@ -1280,7 +1280,7 @@ q_samples = Dict(
 editable: true
 slideshow:
   slide_type: ''
-tags: [active-ipynb]
+tags: [active-ipynb, remove-output]
 ---
 Rvals_ppf = {"A": {}, "B": {}, "C": {}, "D": {}}
 Rvals_avg = {"A": {}, "B": {}, "C": {}, "D": {}}
@@ -1292,7 +1292,7 @@ for model in Rvals_ppf:
         q_list = nsamples_rng.choice(q_samples[model], _L)  # Bootstrap sampling with replacement
         ppf = emd.make_empirical_risk_ppf(q_list)
         Φ_arr = np.linspace(0, 1, _L+1)
-        Rvals_ppf[model][_L] = integrate.simpson(ppf(Φ_arr), Φ_arr)
+        Rvals_ppf[model][_L] = integrate.simpson(ppf(Φ_arr), x=Φ_arr)
         Rvals_avg[model][_L] = q_list.mean()
 ```
 
