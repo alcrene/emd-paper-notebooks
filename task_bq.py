@@ -1,6 +1,23 @@
-"""
-Adaptation of the Calibrate task packaged with emdcmp
-"""
+# ---
+# math:
+#     '\Bemd' : 'B^{\mathrm{EMD}}_{#1}'
+#     '\Bconf': 'B^{\mathrm{epis}}_{#1}'
+#     '\BQ' : 'B^{Q}_{#1}'
+#     '\nN'   : '\mathcal{N}'
+#     '\Unif' : '\operatorname{Unif}'
+#     '\Mtrue': '\mathcal{M}_{\mathrm{true}}'
+# ---
+
+# # Task definition for testing using the $Q$ distribution for model comparison
+
+# This implements a modified version of the `Calibrate` task packaged with `emdcmp`,
+# where insted of using of EMD distribution, the loss distribution (i.e. the distribution of $Q$) is directly used to estimate the probability via the simple ratio
+#
+# $$\BQ{AB;c_Q} := P(Q_A < Q_B + c_Q)\,.$$ 
+#
+# While simple, there is no reason to expect this rule to work, since $Q$ describes aleatoric uncertainty while we are trying to estimate replication uncertainty.
+# And indeed this is what we find; see [](./Ex_UV_cannot-calibrate-with-Q.ipynb) and [](./Ex_Prinz2004_cannot-calibrate-with-Q.ipynb).
+
 import logging
 from   typing import List
 from   functools import partial
