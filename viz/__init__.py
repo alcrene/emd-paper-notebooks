@@ -409,6 +409,9 @@ def format_pow2(a: float, format:Literal["latex","$latex$","unicode"]="unicode")
 
     TODO: Support "siunitx" format, which returns a quantity formatted with {:~Lx}
     """
+    if format not in {"latex", "$latex$", "latex-with-dollar", "unicode"}:
+        raise ValueError(f"`format` argument must be one of 'unicode', 'latex' or '$latex$'. Received '{format}'.")
+
     units = getattr(a, "units", "")
     if units:
         match format:
@@ -419,19 +422,33 @@ def format_pow2(a: float, format:Literal["latex","$latex$","unicode"]="unicode")
             case _:
                 raise ValueError(f"`format` argument must be one of 'unicode', 'latex' or '$latex$'. Received '{format}'.")
         a = a.magnitude
-    p = math.log2(a)
-    if p.is_integer(): p = int(p)
+
+    # Deal with special values: 0 and negative
+    if a == 0:
+        s = "0"
+    else:
+        neg = (a < 0)
+        a = abs(a)
+        p = math.log2(a)
+        if p.is_integer(): p = int(p)
+        if format in {"latex", "$latex$", "latex-with-dollar"}:
+            s = f"2^{{{p}}}"
+        elif format == "unicode":
+            s = f"2{make_num_superscript(p)}"
+        if neg:
+            s = f"-{s}"
+
+    # Add stuff around number (units, $)
     if format in {"latex", "$latex$", "latex-with-dollar"}:
-        s = f"2^{{{p}}}"
         if units:
             s += f"\\,\\mathrm{{{units}}}"  # TODO: Use \siunitx, as in display_quantity
         if format == "$latex$" or format == "latex-with-dollar":
             s = f"${s}$"
         return s
     elif format == "unicode":
-        return f"2{make_num_superscript(p)}{units}"
+        return f"{s}{units}"
     else:
-        raise ValueError(f"`format` argument must be one of 'unicode', 'latex' or '$latex$'. Received '{format}'.")
+        assert False, "Unexpected 'format', which should already have been caught."
 
 def format_pow10(a: float, format:Literal["latex","latex-with-dollar","unicode"]="unicode") -> str:
     """Format a number as a power of 10.
