@@ -1341,7 +1341,9 @@ The epistemic distribution we use varies the parameters $s$, $\Bspec_0$ and $T$ 
 $$\begin{align}
 \log_2 \frac{s}{10^5 \, [\Bspec]^{-1}}  &\sim \Unif(0, 8) \\
 \frac{\Bspec_0}{[\Bspec]} &\sim \nN(0, (10^4)^2) \\
-\frac{T}{[T]} &\sim \Unif(1000, 5000)
+\frac{T}{[T]} &\sim \Unif(1000, 5000) \\
+λ_{\mathrm{min}} &\sim \Unif(10, 20) \, \mathrm{μm} \\
+λ_{\mathrm{max}} - λ_{\mathrm{min}} &\sim \Unif(5, 20) \, \mathrm{μm}
 \end{align}$$
 (Here $[x]$ indicates the units of $x$; units are the same we use elsewhere in this analysis.) The actual data were generated with $s = 10^5 [\Bspec]^{-1}$.
 
@@ -1350,13 +1352,13 @@ We like to avoid Gaussian distributions for calibration, because often Gaussian 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
 :::{important}
-Calibration is concerned with the transition from "certainty in model $A$" to "equivocal evidence" to "certainty in model $B$". It is of no use to us if all calibration datasets are best fitted with the same model. The easiest way to avoid this is to use the candidate models to generate the calibration datasets, randomly selecting which candidate for each dataset. All other things being equal, the calibration curve will resolve fastest if we select each candidate with 50% probability.
+Calibration is concerned with the transition from "certainty in model $A$" to "equivocal evidence" to "certainty in model $B$". It is of no use to us if all calibration datasets are best fitted with the same model. The easiest way to avoid this is to use the candidate models to generate the calibration datasets, randomly selecting which candidate is used for each dataset. All other things being equal, the calibration curve will resolve fastest if we select each candidate with 50% probability.
 
-We also need datasets to span the entire range of certainties, with both clear and ambiguous decisions in favour of $A$ or $B$. One way to do this is to start from a dataset we expect to be ambiguous, and identify a control parameter which can reduce that ambiguity. In this example, the calibration datasets are generated with different $λ_{min}$: this is effective at generating a range of certainties, since for high $λ_{min}$ the two models almost perfectly overlap, while for low $λ_{min}$ the differences are unmistakable. Equivalently, we could start from a dataset with near-perfect discriminability, and identify a control parameters which makes the decision problem ambiguous – this is what we do in the [Prinz example](./Ex_Prinz2004.ipynb).
+We also need datasets to span the entire range of certainties, with both clear and ambiguous decisions in favour of $A$ or $B$. One way to do this is to start from a dataset we expect to be ambiguous, and identify a control parameter which can reduce that ambiguity. In this example, the calibration datasets are generated with different $λ_{min}$: this is effective at generating a range of certainties, since for high $λ_{min}$ the two models almost perfectly overlap, while for low $λ_{min}$ the differences are unmistakable. Alternatively, we could start from a dataset with near-perfect discriminability, and identify a control parameters which makes the decision problem ambiguous – this is what we do in the [Prinz example](./Ex_Prinz2004.ipynb).
 
 Note that since we use the candidate models to generate the datasets during calibration, we don’t need to know the true data model. We only need to identify a regime where model predictions differ.
 
-We can conclude from these remarks that calibration works best when the models are close and allow for ambiguity. However this is not too strong a limitation: if we are unable to calibrate the $\Bemd{}$ because there is no ambiguity between models, then we don’t need the $\Bemd{}$ to falsify one of them.
+We can conclude from these remarks that calibration works best when the models are close and allow for ambiguity. However this is not too strong a limitation: if we are unable to calibrate the $\Bemd{}$ because there is no ambiguity between models, then we probability don’t need the $\Bemd{}$ to determine which one to reject.
 :::
 
 ```{code-cell} ipython3
