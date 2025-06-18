@@ -74,6 +74,7 @@
 
 # %%
 import viz
+import viz.emdcmp
 
 # %%
 from functools import partial
@@ -111,41 +112,28 @@ hv.extension("matplotlib", "bokeh")
 # A subsequent run with $N \in \{256, 512, 1024\}$ can then refine and smooth the curve.
 # :::
 
-# %% editable=true slideshow={"slide_type": ""}
-#N = 512
-N = 64
-Ωdct = {(f"{Ω.a} vs {Ω.b}", Ω.ξ_name, Ω.σo_dist, Ω.τ_dist, Ω.σi_dist): Ω
-        for Ω in (EpistemicDist(N, a, b, ξ_name, σo_dist, τ_dist, σi_dist)
-                  for (a, b) in [("A", "B"), ("A", "D"), ("C", "D")]
-                  for ξ_name in ["Gaussian", "Cauchy"]
-                  for σo_dist in ["low noise", "high noise"]
-                  for τ_dist in ["short input correlations", "long input correlations"]
-                  for σi_dist in ["weak input", "strong input"]
-            )
-       }
-
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# :::{note}
-# The code cell above runs a large number of tasks, which took many days on a small server. For our initial run we selected specifically the 6 runs we wanted to appear in the the main text:
+# Full list of epistemic dists. This is more than is useful for testing the $\BQ{}$ variant of risk distributions.
 #
 # ```python
-# #N = 64
-# N = 512
+# N = 64
+# #N = 512
 # Ωdct = {(f"{Ω.a} vs {Ω.b}", Ω.ξ_name, Ω.σo_dist, Ω.τ_dist, Ω.σi_dist): Ω
-#         for Ω in [
-#             EpistemicDist(N, "A", "D", "Gaussian", "low noise", "short input correlations", "weak input"),
-#             EpistemicDist(N, "C", "D", "Gaussian", "low noise", "short input correlations", "weak input"),
-#             EpistemicDist(N, "A", "B", "Gaussian", "low noise", "short input correlations", "weak input"),
-#             EpistemicDist(N, "A", "D", "Gaussian", "low noise", "short input correlations", "strong input"),
-#             EpistemicDist(N, "C", "D", "Gaussian", "low noise", "short input correlations", "strong input"),
-#             EpistemicDist(N, "A", "B", "Gaussian", "low noise", "short input correlations", "strong input"),
-#         ]
+#         for Ω in (EpistemicDist(N, a, b, ξ_name, σo_dist, τ_dist, σi_dist)
+#                   for (a, b) in [("A", "B"), ("A", "D"), ("C", "D")]
+#                   for ξ_name in ["Gaussian", "Cauchy"]
+#                   for σo_dist in ["low noise", "high noise"]
+#                   for τ_dist in ["short input correlations", "long input correlations"]
+#                   for σi_dist in ["weak input", "strong input"]
+#             )
 #        }
 # ```
-# :::
+#
+# Instead we only run the experiments on the 6 epistemic distributions used in the main paper.
 
 # %%
-#N = 128
+N = 64
+N = 128
 N = 512
 Ωdct = {(f"{Ω.a} vs {Ω.b}", Ω.ξ_name, Ω.σo_dist, Ω.τ_dist, Ω.σi_dist): Ω
         for Ω in [
@@ -165,12 +153,27 @@ N = 512
 # :::
 
 # %% editable=true slideshow={"slide_type": ""}
+c_chosen = 2**-2
+c_list = [2**-6, 2**-4, 2**-2, 2**0, 2**4]
+
+# %%
+cQ_chosen = -2**-1
+cQ_list=[#-2**1,  2**1,
+         #-2**0,  2**0,
+         -2**-1, 2**-1,
+         #-2**-2, 2**-2,
+         -2**-3, 2**-3,
+         #0
+        ]
+
+# %% editable=true slideshow={"slide_type": ""}
 tasks = {}
 for Ωkey, Ω in Ωdct.items():
     task = CalibrateBQ(
-        #reason = f"BQ calibration attempt – {Ω.a} vs {Ω.b} - {Ω.ξ_name} - {Ω.σo_dist} - {Ω.τ_dist} - {Ω.σi_dist} - {N=}",
-        reason = "BQ debug",
-        c_list = [-2**1, -2**0, -2**-1, -2**-2, -2**-3, -2**-4, 0, 2**-4, 2**-3, 2**-2, 2**-1, 2**0, 2**1],
+        reason = f"BQ calibration attempt – {Ω.a} vs {Ω.b} - {Ω.ξ_name} - {Ω.σo_dist} - {Ω.τ_dist} - {Ω.σi_dist} - {N=}",
+        #reason = "BQ debug",
+        #c_list = [-2**1, -2**0, -2**-1, -2**-2, -2**-3, -2**-4, 0, 2**-4, 2**-3, 2**-2, 2**-1, 2**0, 2**1],
+        c_list = cQ_list,
         # Collection of experiments (generative data model + candidate models)
         experiments = Ω.generate(N),
         # Calibration parameters
@@ -183,6 +186,13 @@ for Ωkey, Ω in Ωdct.items():
 # The code below creates task files which can be executed from the command line with the following:
 #
 #     smttask run -n1 --import config <task file>
+
+# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "skip-execution"]
+#     for key, task in tasks.items():
+#         if not task.has_run:  # Don’t create task files for tasks which have already run
+#             Ω = task.experiments
+#             taskfilename = f"prinz_calibration__{Ω.a}vs{Ω.b}_{Ω.ξ_name}_{Ω.σo_dist}_{Ω.τ_dist}_{Ω.σi_dist}_N={Ω.N}_c={task.c_list}"
+#             task.save(taskfilename)
 
 # %% [markdown]
 #     import smttask
@@ -198,13 +208,6 @@ with catch_warnings():
     filterwarnings("ignore", "The previous implementation of stack is deprecated")
     for task in tasks.values():
         task.run()
-
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "skip-execution"]
-#     for key, task in tasks.items():
-#         if not task.has_run:  # Don’t create task files for tasks which have already run
-#             Ω = task.experiments
-#             taskfilename = f"prinz_calibration__{Ω.a}vs{Ω.b}_{Ω.ξ_name}_{Ω.σo_dist}_{Ω.τ_dist}_{Ω.σi_dist}_N={Ω.N}_c={task.c_list}"
-#             task.save(taskfilename)
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ### Analysis
@@ -230,14 +233,16 @@ with catch_warnings():
 #
 #     calib_results = task.unpack_results(task.run())
 
+# %%
+calib_bq = viz.emdcmp.calibration_plot(calib_results)
+
+# %%
+calib_bq.overlayed_scatters
+
+
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # We can check the efficiency of sampling by plotting histograms of $\Bemd{}$ and $\Bconf{}$: ideally the distribution of $\Bemd{}$ is flat, and that of $\Bconf{}$ is equally distributed between 0 and 1. Since we need enough samples at every subinterval of $\Bemd{}$, it is the most sparsely sampled regions which determine how many calibration datasets we need to generate. (And therefore how long the computation needs to run.)
 # Beyond making for shorter compute times, a flat distribution however isn’t in and of itself a good thing: more important is that the criterion is able to resolve the models when it should.
-
-# %% editable=true slideshow={"slide_type": ""}
-c_chosen = 2**-2
-c_list = [2**-6, 2**-4, 2**-2, 2**0, 2**4]
-
 
 # %% editable=true slideshow={"slide_type": ""}
 class CalibHists:
