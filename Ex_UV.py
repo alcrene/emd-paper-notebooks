@@ -37,7 +37,7 @@
 # %{{ startpreamble }}
 # %{{ endpreamble }}
 
-# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
+# %% [markdown] editable=true slideshow={"slide_type": ""}
 # > **NOTE** Within Jupyter Lab, this notebook is best displayed with [`jupyterlab-myst`](https://myst-tools.org/docs/mystjs/quickstart-jupyter-lab-myst).
 #
 # > **NOTE** This notebook is synced with a Python file using [Jupytext](https://jupytext.readthedocs.io/). **That file is required** to run this notebook, and it must be in the current working directory.
@@ -1069,6 +1069,72 @@ def get_ppfs(_dataset, _fitted: None|Dict[str, FitResult]=None) -> tuple[Dict[st
 # We can conclude from these remarks that calibration works best when the models are close and allow for ambiguity. However this is not too strong a limitation: if we are unable to calibrate the $\Bemd{}$ because there is no ambiguity between models, then we probability don’t need the $\Bemd{}$ to determine which one to reject.
 # :::
 
+# %% editable=true slideshow={"slide_type": ""}
+FitResult_fixedT = namedtuple("FitResult_fixedT", ["σ"])
+def fit_gaussian_σ(data, T) -> Dict[str, FitResult_fixedT]:
+    """
+    The candidate models depend on the temperature T and use a Gaussian
+    observation model with std dev σ to compute their risk.
+    T is treated as a known constant.
+    σ is chosen by maximizing the likelihood.
+    """
+    
+    fitted_σ = Dict()
+
+    def f(log2_σ, candidate_model, _λ_B):
+        σ = 2**log2_σ
+        risk = Q(candidate_model, σ, T=T)(_λ_B).mean()
+        priorσ = 2**(-log2_σ/128)  # Soft floor on σ so it cannot go too low
+        return risk + priorσ
+    
+    res = optimize.minimize(f, np.log2(1e-4), ("Rayleigh-Jeans", data), tol=1e-5)
+    σ = 2**res.x
+    fitted_σ.RJ = FitResult_fixedT(σ*Bunits,)
+    
+    res = optimize.minimize(f, np.log2(1e-4), ("Planck", data))
+    σ = 2**res.x
+    fitted_σ.Planck = FitResult_fixedT(σ*Bunits,)
+
+    return fitted_σ
+
+
+# %% editable=true slideshow={"slide_type": ""}
+@dataclass(frozen=True)
+class FittedCandidateModels_fixedT:
+    """
+    Candidate models need to be tuned to a dataset by fitting σ.
+    This encapsulates that functionality.
+    """
+    dataset: Dataset
+
+    @property
+    @cache
+    def fitted(self):  # Fitting is deffered until we actually need it.
+        return fit_gaussian_σ(self.dataset.get_data(), T=data_T)
+
+    @property
+    def Planck(self):
+        rng = utils.get_rng(*self.dataset.purpose, "candidate Planck")
+        return utils.compose(
+            gaussian_noise(0, self.fitted.Planck.σ, rng=rng),
+            CandidateModel("Planck", T=data_T)
+        )
+    @property
+    def RJ(self):
+        rng = utils.get_rng(*self.dataset.purpose, "candidate RJ")
+        return utils.compose(
+            gaussian_noise(0, self.fitted.RJ.σ, rng=rng),
+            CandidateModel("Rayleigh-Jeans", T=data_T)
+        )
+
+    @property
+    def QPlanck(self):
+        return Q("Planck", σ=self.fitted.Planck.σ, T=self.dataset.T)
+    @property
+    def QRJ(self):
+        return Q("Rayleigh-Jeans", σ=self.fitted.RJ.σ, T=self.dataset.T)
+
+
 # %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
 @dataclass(frozen=True)
 class FittedCandidateModels:
@@ -1229,6 +1295,91 @@ class EpistemicDist(emd.tasks.EpistemicDist):
 #             candidates = FittedCandidateModels(dataset)
 #             # Yield the data model, candidate models along with their loss functions
 #             yield emd.tasks.Experiment(
+#                 data_model=dataset,
+#                 candidateA=candidates.Planck, candidateB=candidates.RJ,
+#                 QA=candidates.QPlanck, QB=candidates.QRJ)
+# ```
+
+# %% editable=true slideshow={"slide_type": ""} tags=["active-py"] raw_mimetype=""
+@dataclass(frozen=True)  # frozen allows dataclass to be hashed
+class EpistemicDistBiasSweep(emdcmp.tasks.EpistemicDist):
+    N: int|Literal[np.inf] = np.inf
+
+    #s_p_range   : tuple[int,int] = (13, 20)  # log₂ data_s ≈ 16.6
+    B0_range    : PintQuantity   = (-1e-4, 1e-4) * Bunits
+    
+    __version__: int       = 1  # If the distribution is changed, update this number
+                                # to make sure previous tasks are invalidated
+    #def get_s(self, rng):
+    #    p = rng.uniform(*self.s_p_range)
+    #    return 2**p * Bunits**-1    # NB: Larger values => less noise
+    def get_B0(self, rng):
+        return rng.uniform(*self.B0_range.to(Bunits).m) * Bunits
+
+    ## Experiment generator ##
+
+    def __iter__(self):
+        rng = utils.get_rng("uv", "calibration", "bias-only")
+        n = 0
+        while n < self.N:
+            n += 1
+            dataset = Dataset(
+                ("uv", "calibration", "fit candidates", n),
+                L    = L_med,          # L only used to fit model candidates. `CalibrateTask` will
+                λmin = data_λ_min,
+                λmax = data_λ_max,
+                s    = data_noise_s,
+                T    = data_T,
+                B0   = self.get_B0(rng),
+                phys_model = rng.choice(["Rayleigh-Jeans", "Planck"])
+            )
+            # Fit the candidate models to the data
+            candidates = FittedCandidateModels_fixedT(dataset)
+            # Yield the data model, candidate models along with their loss functions
+            yield emdcmp.tasks.Experiment(
+                data_model=dataset,
+                candidateA=candidates.Planck, candidateB=candidates.RJ,
+                QA=candidates.QPlanck, QB=candidates.QRJ)
+
+
+# %% [markdown] editable=true slideshow={"slide_type": ""}
+# ```python
+# @dataclass(frozen=True)  # frozen allows dataclass to be hashed
+# class EpistemicDistBiasSweep(emdcmp.tasks.EpistemicDist):
+#     N: int|Literal[np.inf] = np.inf
+#
+#     #s_p_range   : tuple[int,int] = (13, 20)  # log₂ data_s ≈ 16.6
+#     B0_range    : PintQuantity   = (-1e-4, 1e-4) * Bunits
+#     
+#     __version__: int       = 1  # If the distribution is changed, update this number
+#                                 # to make sure previous tasks are invalidated
+#     #def get_s(self, rng):
+#     #    p = rng.uniform(*self.s_p_range)
+#     #    return 2**p * Bunits**-1    # NB: Larger values => less noise
+#     def get_B0(self, rng):
+#         return rng.uniform(*self.B0_range.to(Bunits).m) * Bunits
+#
+#     ## Experiment generator ##
+#
+#     def __iter__(self):
+#         rng = utils.get_rng("uv", "calibration", "bias-only")
+#         n = 0
+#         while n < self.N:
+#             n += 1
+#             dataset = Dataset(
+#                 ("uv", "calibration", "fit candidates", n),
+#                 L    = L_med,          # L only used to fit model candidates. `CalibrateTask` will
+#                 λmin = data_λ_min,
+#                 λmax = data_λ_max,
+#                 s    = data_noise_s,
+#                 T    = data_T,
+#                 B0   = self.get_B0(rng),
+#                 phys_model = rng.choice(["Rayleigh-Jeans", "Planck"])
+#             )
+#             # Fit the candidate models to the data
+#             candidates = FittedCandidateModels_fixedT(dataset)
+#             # Yield the data model, candidate models along with their loss functions
+#             yield emdcmp.tasks.Experiment(
 #                 data_model=dataset,
 #                 candidateA=candidates.Planck, candidateB=candidates.RJ,
 #                 QA=candidates.QPlanck, QB=candidates.QRJ)
