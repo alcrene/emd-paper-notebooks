@@ -289,13 +289,12 @@ def get_rng(*args: list[int|float|bytes|str]):
        >>> get_rng(1, 1)
 
        both produce the same PRNG because of the way floats are internally
-       converted to integers. On the other hand, collision hashes are exceedingly
-       unlikely (basically the same probability as a SHA256 collision) if
-       all `get_rng` calls use the same types of arguments in the same order.
+       converted to integers. This can be avoided by ensuring that all
+       `get_rng` calls use the same types of arguments in the same order.
 
-       That said, even without consistent arguments, the probability is low, and
-       in the case it happens, a `SeedCollisionError` (subclass of
-       `RuntimeError`) is raised.
+       That said, even without consistent arguments, the probability is low,
+       and in the case it happens,
+       a `SeedCollisionError` (subclass of `RuntimeError`) is raised.
     """
     # Arguments may contain nested tuples: Flatten them
     new_args = flatten(args)
@@ -311,10 +310,9 @@ def get_rng(*args: list[int|float|bytes|str]):
     # Create the seed sequence, and check if the first seed state it produces
     # collides with a previously produced one.
     seedseq = np.random.SeedSequence((entropy, *new_args))
-    first_seed = seedseq.generate_state(1)[0]
-    match_args = produced_seeds.get(first_seed, None)
+    match_args = produced_seeds.get(seedseq.entropy, None)
     if match_args is None:
-        produced_seeds[first_seed] = args
+        produced_seeds[seedseq.entropy] = args
     elif args != match_args:
         raise SeedCollisionError(
             "The following two sets of arguments produce the same seed:\n"
