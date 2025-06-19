@@ -78,6 +78,7 @@ import viz.emdcmp
 
 # %%
 from functools import partial
+from itertools import chain
 
 # %% [markdown]
 # Load the customized calibration task which computes $\BQ{}$ instead of $\Bemd{}$.
@@ -90,10 +91,6 @@ import numpy as np
 
 # %%
 import emdcmp
-
-# %%
-import multiprocessing as mp
-mp.set_start_method('spawn')  # A warning is now emitted for code combining "fork" with multiprocessing
 
 # %%
 import holoviews as hv
@@ -135,6 +132,7 @@ hv.extension("matplotlib", "bokeh")
 N = 64
 N = 128
 N = 512
+N = 2048
 Ωdct = {(f"{Ω.a} vs {Ω.b}", Ω.ξ_name, Ω.σo_dist, Ω.τ_dist, Ω.σi_dist): Ω
         for Ω in [
             EpistemicDist(N, "A", "D", "Gaussian", "low noise", "short input correlations", "weak input"),
@@ -167,20 +165,26 @@ cQ_list=[#-2**1,  2**1,
         ]
 
 # %% editable=true slideshow={"slide_type": ""}
-tasks = {}
+tasks_normal = {}
+tasks_BQ = {}
 for Ωkey, Ω in Ωdct.items():
     task = CalibrateBQ(
         reason = f"BQ calibration attempt – {Ω.a} vs {Ω.b} - {Ω.ξ_name} - {Ω.σo_dist} - {Ω.τ_dist} - {Ω.σi_dist} - {N=}",
-        #reason = "BQ debug",
-        #c_list = [-2**1, -2**0, -2**-1, -2**-2, -2**-3, -2**-4, 0, 2**-4, 2**-3, 2**-2, 2**-1, 2**0, 2**1],
         c_list = cQ_list,
-        # Collection of experiments (generative data model + candidate models)
         experiments = Ω.generate(N),
-        # Calibration parameters
         Ldata = L_data,
         Linf = Linf
     )
-    tasks[Ωkey]=task
+    tasks_BQ[Ωkey] = task
+
+    task = emdcmp.tasks.Calibrate(
+        reason = f"Prinz calibration – {Ω.a} vs {Ω.b} - {Ω.ξ_name} - {Ω.σo_dist} - {Ω.τ_dist} - {Ω.σi_dist} - {N=}",
+        c_list = c_list,
+        experiments = Ω.generate(N),
+        Ldata = L_data,
+        Linf = Linf
+    )
+    tasks_normal[Ωkey] = task
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # The code below creates task files which can be executed from the command line with the following:
@@ -188,7 +192,8 @@ for Ωkey, Ω in Ωdct.items():
 #     smttask run -n1 --import config <task file>
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "skip-execution"]
-#     for key, task in tasks.items():
+#     for task in chain(tasks_normal.values(),
+#                       tasks_BQ.values()):
 #         if not task.has_run:  # Don’t create task files for tasks which have already run
 #             Ω = task.experiments
 #             taskfilename = f"prinz_calibration__{Ω.a}vs{Ω.b}_{Ω.ξ_name}_{Ω.σo_dist}_{Ω.τ_dist}_{Ω.σi_dist}_N={Ω.N}_c={task.c_list}"
@@ -235,6 +240,9 @@ with catch_warnings():
 
 # %%
 calib_bq = viz.emdcmp.calibration_plot(calib_results)
+
+# %%
+calib_bq.Bemd_hists.overlay()
 
 # %%
 calib_bq.overlayed_scatters
