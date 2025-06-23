@@ -317,8 +317,8 @@ def calibration_plot(calib_results: CalibrateResult,
     for c, res in calib_results.items():
         res_Bemd = res["Bemd"] if "Bemd" in res.dtype.names else res["BQ"]
         res_Bepis = res["Bepis"] if "Bepis" in res.dtype.names else res["Bconf"]
-        Bemd_hists[c]  = np.histogram(res_Bemd,              bins="auto", density=False)
-        Bepis_hists[c] = np.histogram(res_Bepis.astype(int), bins="auto", density=False)
+        Bemd_hists[c]  = np.histogram(res_Bemd,              bins="auto", density=True)
+        Bepis_hists[c] = np.histogram(res_Bepis.astype(int), bins="auto", density=True)
 
     ## Prohibited & discouraged areas ##
     # Prohibited area

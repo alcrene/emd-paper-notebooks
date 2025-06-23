@@ -290,18 +290,26 @@ class differences(hv.Operation):
 # ### `make_Rdist_fig`
 
 def make_Rdist_fig(R_samples: dict, xticks: list, yticks: list, colors: hv.Cycle|list[str],
-                   xticklabels=None, yticklabels=None, aspect=3):
+                   xlim=None, xticklabels=None, yticklabels=None, aspect=3,
+                   xlabelshift=7, ylabelshift=5):
+    """
+    Specifying `xlim` can help ensure that plots have a consistent domain
+    even when the data or xticks change.
+    """
     Rdists = [hv.Distribution(_Rlst, kdims=[dims.matplotlib.R], label=f"Model {a}")
               for a, _Rlst in R_samples.items()]
     Rcurves = [hv.operation.stats.univariate_kde(dist).to.curve()
                for dist in Rdists]
     fig_Rdists = hv.Overlay(Rdists) * hv.Overlay(Rcurves)
 
+    if xlim is None:
+        xlim = fig_Rdists.range("R")
+
     # Plot styling
-    if xticklabels is None and xticks and len(xticks) > 2:
-        xticklabels = [str(xticks[0])] + [""]*(len(xticks)-2) + [str(xticks[-1])]
-    if yticklabels is None and yticks and len(yticks) > 2:
-        yticklabels = [str(yticks[0])] + [""]*(len(yticks)-2) + [str(yticks[-1])]
+    if xticklabels is None and xticks and len(xticks) >= 2:
+        xticklabels = [str(xticks[0])] + [""]*max(0, len(xticks)-2) + [str(xticks[-1])]
+    if yticklabels is None and yticks and len(yticks) >= 2:
+        yticklabels = [str(yticks[0])] + [""]*max(0, len(yticks)-2) + [str(yticks[-1])]
     hooks = []
     if xticklabels:
         hooks += [set_xticks_hook(xticks), set_xticklabels_hook(xticklabels), xlabel_shift_hook(7)]
@@ -319,7 +327,7 @@ def make_Rdist_fig(R_samples: dict, xticks: list, yticks: list, colors: hv.Cycle
                         hooks=hooks,
                         legend_position="top_left", legend_cols=1,
                         show_legend=False,
-                        xlim=fig_Rdists.range("R"),  # Redundant, but ensures range is not changed
+                        xlim=xlim,
                         aspect=aspect
                        )
     )

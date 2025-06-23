@@ -203,10 +203,19 @@ fig.opts(
 ```
 
 ```{code-cell} ipython3
+calib_normal.Bemd_hists.overlay() \
++ calib_BQ.Bemd_hists.select(c=[-2**1, -2**-1, -2**-3, 0, 2**-3, 2**-1, 2**1]).overlay()
+```
+
+```{code-cell} ipython3
 ---
 editable: true
 slideshow:
   slide_type: ''
 ---
+calib_BQ.Bemd_hists.select(c=[-2**1, -2**-1, -2**-3, 0, 2**-3, 2**-1, 2**1])
+```
+
+```{code-cell} ipython3
 
 ```

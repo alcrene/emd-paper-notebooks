@@ -13,7 +13,10 @@
 # This implements a modified version of the `Calibrate` task packaged with `emdcmp`,
 # where insted of using of EMD distribution, the loss distribution (i.e. the distribution of $Q$) is directly used to estimate the probability via the simple ratio
 #
-# $$\BQ{AB;c_Q} := P(Q_A < Q_B + c_Q)\,.$$ 
+# $$
+# \BQ{AB;c_Q} &:= P(Q_A < Q_B + ε)\,, \\
+# ε &\sim \nN(0, c) \,.
+# $$ 
 #
 # While simple, there is no reason to expect this rule to work, since $Q$ describes aleatoric uncertainty while we are trying to estimate replication uncertainty.
 # And indeed this is what we find; see [](./Ex_UV_cannot-calibrate-with-Q.ipynb) and [](./Ex_Prinz2004_cannot-calibrate-with-Q.ipynb).
@@ -34,6 +37,7 @@ from smttask import RecordedTask, TaskOutput
 from emdcmp.tasks import compute_Bconf as compute_Bepis
 
 from config import config
+from utils import get_rng
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +51,7 @@ class CalibrateOutput(TaskOutput):
     BQ : List[float]
     Bepis: List[float]
 
-def compute_BQ(ω, c, Ldata):
+def compute_BQ(ω, c, Ldata, LQ):
     """
     If c is array-like, return an array of values, one for each c.
     """
@@ -56,13 +60,19 @@ def compute_BQ(ω, c, Ldata):
     data = ω.data_model(Ldata)                                   ; t2 = time.perf_counter()
     logger.debug(f"Compute BQ - Done generating {Ldata} data points. Took {t2-t1:.2f} s")
 
-    c = np.reshape(c, (*np.shape(c), 1))
-    return np.mean(ω.QA(ω.candidateA(data)) < ω.QB(ω.candidateB(data)) + c,
-                   axis=-1)
+    # Draw a bunch of random ε to perform the convolution with Monte Carlo
+    rng = get_rng(ω.dataset.purpose, ω.a, ω.b, c, Ldata, LQ)
+    c_shape = np.shape(c)
+    c = np.reshape(c, (*c_shape, 1, 1))
+    ε = rng.normal(0, c, size=(*c_shape, LQ, Ldata))
 
-def compute_BQ_and_Bepis(i_ω, c, Ldata, Linf):
+    # For each value of c, average over the ε draws and the data points.
+    return np.mean(ω.QA(ω.candidateA(data)) < ω.QB(ω.candidateB(data)) + ε,
+                   axis=(-2,-1))
+
+def compute_BQ_and_Bepis(i_ω, c, Ldata, Linf, LQ):
     i, ω = i_ω
-    BQ = compute_BQ(ω, c, Ldata)
+    BQ = compute_BQ(ω, c, Ldata, LQ)
     Bepis = compute_Bepis(ω.data_model, ω.QA, ω.QB, Linf)
     return i, BQ, Bepis
 
@@ -76,12 +86,17 @@ class CalibrateBQ:
         experiments: Dataclass,   # Iterable of Experiment elements
         Ldata      : int,
         Linf       : int,
+        LQ         : int,
         ) -> CalibrateOutput:
+
+        # Validation
+        if any(c < 0 for c in c_list):
+            raise ValueError("All `c` values must be positive")
 
         # Bind arguments to the compute* function, so it takes one argument
         c_hashable = tuple(c_list)
         compute_partial = partial(compute_BQ_and_Bepis,
-                                  c=c_hashable, Ldata=Ldata, Linf=Linf)
+                                  c=c_hashable, Ldata=Ldata, Linf=Linf, LQ=LQ)
 
 
         # Define dictionaries into which we accumulate results
