@@ -61,7 +61,13 @@ def compute_BQ(ω, c, Ldata, LQ):
     logger.debug(f"Compute BQ - Done generating {Ldata} data points. Took {t2-t1:.2f} s")
 
     # Draw a bunch of random ε to perform the convolution with Monte Carlo
-    rng = get_rng(ω.dataset.purpose, ω.a, ω.b, c, Ldata, LQ)
+    try:
+        descA = ω.QA.candidate_model
+        descB = ω.QB.candidate_model
+    except AttributeError:
+        descA = ω.QA.phys_model + "+" + ω.candidateA.obs_model
+        descB = ω.QB.phys_model + "+" + ω.candidateB.obs_model
+    rng = get_rng(ω.data_model.purpose, descA, descB, c, Ldata, LQ)
     c_shape = np.shape(c)
     c = np.reshape(c, (*c_shape, 1, 1))
     ε = rng.normal(0, c, size=(*c_shape, LQ, Ldata))
