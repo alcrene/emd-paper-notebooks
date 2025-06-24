@@ -22,10 +22,10 @@ scityping.config.trust_all_inputs = True
 ## End workaround ##
 
 import multiprocessing as mp
-try:
-    mp.set_start_method('spawn')  # A warning is now emitted for code combining "fork" with multiprocessing
-except RuntimeError:
-    pass    # Start method has already been set; move on
+#try:
+#    mp.set_start_method('spawn')  # A warning is now emitted for code combining "fork" with multiprocessing
+#except RuntimeError:
+#    pass    # Start method has already been set; move on
 
 
 # Configure JAX to use double precision
