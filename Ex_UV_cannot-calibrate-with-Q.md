@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.16.7
+    jupytext_version: 1.16.2
 kernelspec:
   display_name: Python (emd-paper)
   language: python
@@ -149,10 +149,12 @@ tags: [active-ipynb]
 ---
 task_BQ = task_bq.CalibrateBQ(
     reason = "UV calibration – RJ vs Plank – bias sweep",
-    c_list = [-2**1, -2**0, -2**-1, -2**-2, -2**-3, -2**-4, 0, 2**-4, 2**-3, 2**-2, 2**-1, 2**0, 2**1],
+    #c_list = [-2**1, -2**0, -2**-1, -2**-2, -2**-3, -2**-4, 0, 2**-4, 2**-3, 2**-2, 2**-1, 2**0, 2**1],
+    c_list = c_list,
     experiments = Ω.generate(N),
     Ldata = 1024,
-    Linf = 12288
+    Linf = 12288,
+    LQ = 4000
 )
 ```
 
@@ -204,7 +206,8 @@ fig.opts(
 
 ```{code-cell} ipython3
 calib_normal.Bemd_hists.overlay() \
-+ calib_BQ.Bemd_hists.select(c=[-2**1, -2**-1, -2**-3, 0, 2**-3, 2**-1, 2**1]).overlay()
++ calib_BQ.Bemd_hists.overlay()
+#+ calib_BQ.Bemd_hists.select(c=[-2**1, -2**-1, -2**-3, 0, 2**-3, 2**-1, 2**1]).overlay()
 ```
 
 ```{code-cell} ipython3
@@ -213,7 +216,7 @@ editable: true
 slideshow:
   slide_type: ''
 ---
-calib_BQ.Bemd_hists.select(c=[-2**1, -2**-1, -2**-3, 0, 2**-3, 2**-1, 2**1])
+#calib_BQ.Bemd_hists.select(c=[-2**1, -2**-1, -2**-3, 0, 2**-3, 2**-1, 2**1])
 ```
 
 ```{code-cell} ipython3
