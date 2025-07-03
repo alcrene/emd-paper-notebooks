@@ -175,7 +175,7 @@ class CalibrationPlotElements:
         return hv.HoloMap(frames, kdims=["c"], group="Bepis_hists").opts(*self.hist_opts)
 
     def _repr_mimebundle_(self, *args, **kwds):
-        return self.scatters()._repr_mimebundle_(*args, **kwds)
+        return self.scatters._repr_mimebundle_(*args, **kwds)
 
 
 # %%
