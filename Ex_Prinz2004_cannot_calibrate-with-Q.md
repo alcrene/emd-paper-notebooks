@@ -84,7 +84,7 @@ from config import config
 
 ```{code-cell} ipython3
 import viz
-#import viz.emdcmp
+import viz.emdcmp
 ```
 
 ```{code-cell} ipython3
@@ -219,6 +219,7 @@ for Ωkey, Ω in Ωdct.items():
     task = emdcmp.tasks.Calibrate(
         reason = f"Prinz calibration – {Ω.a} vs {Ω.b} - {Ω.ξ_name} - {Ω.σo_dist} - {Ω.τ_dist} - {Ω.σi_dist} - {N=}",
         c_list = c_list,
+        #c_list = [2**-6, 2**-4, 2**-2, 2**0, 2**4],
         experiments = Ω.generate(N),
         Ldata = L_data,
         Linf = Linf
@@ -254,7 +255,7 @@ before continuing.
 assert all(task.has_run for task in chain(tasks_normal.values(), tasks_BQ.values()))
 ```
 
-+++ {"editable": true, "slideshow": {"slide_type": ""}, "jp-MarkdownHeadingCollapsed": true}
++++ {"editable": true, "slideshow": {"slide_type": ""}}
 
 ### Analysis
 
@@ -468,16 +469,30 @@ display(fig)
 ```
 
 ```{code-cell} ipython3
-hv.Layout(
-    format_calib_curves([calplot.overlayed_scatters for calplot in calibs_BQ.values()],
+fig = hv.Layout(
+    format_calib_curves([calplot.overlayed_scatters.redim(Bemd=hv.Dimension("BQ", label="$B^Q$"))
+                         for calplot in calibs_BQ.values()],
                         list(tasks_BQ.values()))
 ).cols(3).opts(*calibopts, hv.opts.Scatter(backend="matplotlib", s=20),
-               hv.opts.Layout(backend="matplotlib", hspace=-0.1, vspace=.1))
+               #hv.opts.Layout(backend="matplotlib", hspace=-0.2, vspace=.1),
+               hv.opts.Overlay(show_legend=False))
+display(fig)
+```
+
+```{code-cell} ipython3
+legend = hv.Overlay(
+    [next(iter(plot.Scatter.values())).clone()
+     for (c,), plot in next(iter(calibs_normal.values())).scatters.overlay("c").data.items()])
+legend.opts(
+    hv.opts.Overlay(fig_inches=0.01, fontscale=2),
+    hv.opts.Scatter(hooks=[viz.xaxis_off_hook, viz.yaxis_off_hook], s=40)
+)
 ```
 
 ```{code-cell} ipython3
 hv.Layout(
-    format_calib_curves([calplot.scatters[c_chosen] for calplot in calibs_normal.values()],
+    format_calib_curves([calplot.scatters[1]*calplot.scatters[4]
+                         for calplot in calibs_normal.values()],
                         list(tasks_normal.values()))
 ).cols(3).opts(*calibopts, hv.opts.Scatter(backend="matplotlib", s=20),
                hv.opts.Layout(backend="matplotlib", hspace=0.1, vspace=.02))
@@ -485,7 +500,7 @@ hv.Layout(
 
 ```{code-cell} ipython3
 hv.Layout(
-    format_calib_curves([calplot.scatters[cQ_chosen] for calplot in calibs_BQ.values()],
+    format_calib_curves([calplot.scatters[c_chosen] for calplot in calibs_BQ.values()],
                         list(tasks_BQ.values()))
 ).cols(3).opts(*calibopts, hv.opts.Scatter(backend="matplotlib", s=20),
                hv.opts.Layout(backend="matplotlib", hspace=0.1, vspace=.02))
@@ -503,12 +518,9 @@ print(tabulate(data, headers, tablefmt="simple_outline"))
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
-(code_prinz-model-comparison)=
 ## EMD model comparison
 
-Based on the calibration results, we choose the value $c=${glue:text}`c_chosen_prinz` (set above) to compute the $\Bemd{}$ criterion between models.
-
-First we recreate `synth_ppf` and `mixed_ppf` as we did above.
+First we recreate `synth_ppf` and `mixed_ppf`.
 
 ```{code-cell} ipython3
 from addict import Dict
@@ -571,13 +583,19 @@ R_samples = {
 Convert the samples into a distributions using a kernel density estimate (KDE).
 
 ```{code-cell} ipython3
+viz.format_pow2?
+```
+
+```{code-cell} ipython3
 hv.Layout([
-    hv.Overlay([hv.Distribution(samples) for samples in R_samples[c].values()])
+    hv.Overlay([hv.Distribution(samples, kdims=hv.Dimension("R", label="$R$")) for samples in R_samples[c].values()],
+               label=f"$c={viz.format_pow2(c, format='latex')}$")
     for c in R_samples
 ]).cols(1).opts(
     hv.opts.Overlay(aspect=3),
-    hv.opts.Layout(fig_inches=3.5, shared_axes=False)
-)
+    hv.opts.Distribution(facecolor=colors.LP_candidates, edgecolor=colors.LP_candidates),
+    hv.opts.Layout(fig_inches=3.5, shared_axes=False, sublabel_format="", tight=True)
+).cols(3)
 ```
 
 ```{code-cell} ipython3
@@ -869,7 +887,7 @@ def compare_matrix(R_samples: Dict[str, ArrayLike]) -> pd.DataFrame:
 ```
 :::
 
-+++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"], "jp-MarkdownHeadingCollapsed": true}
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
 ## Exported notebook variables
 

@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.2
+#       jupytext_version: 1.16.7
 #   kernelspec:
 #     display_name: Python (emd-paper)
 #     language: python
@@ -72,6 +72,9 @@ import task_bq
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
 # Ω = EpistemicDistBiasSweep()
 
+# %%
+data_λ_min, data_λ_max
+
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
 # task = emdcmp.tasks.Calibrate(
 #     reason = "UV calibration – RJ vs Plank – bias sweep",
@@ -122,7 +125,27 @@ calib_normal.Bemd_hists.overlay() \
 + calib_BQ.Bemd_hists.overlay()
 #+ calib_BQ.Bemd_hists.select(c=[-2**1, -2**-1, -2**-3, 0, 2**-3, 2**-1, 2**1]).overlay()
 
+# %%
+fig = (calib_normal.overlayed_scatters << hv.Empty() << calib_normal.Bemd_hists.overlay()) \
+       + (calib_BQ.overlayed_scatters.redim(c="c_Q", Bemd="BQ") << hv.Empty() << calib_BQ.Bemd_hists.overlay())
+fig.opts(
+    hv.opts.Overlay(show_legend=False, fontscale=2),
+    hv.opts.NdOverlay(legend_position="top", legend_cols=5, fontscale=2, fontsize={'legend_title':8}),
+    hv.opts.Layout(fig_inches=5, fontscale=4, hspace=0.1, sublabel_position=(-0.25, 0.95), sublabel_size=14),
+    hv.opts.Curve(linewidth=1, fontscale=2),
+    hv.opts.Scatter(s=20),
+)
+
 # %% editable=true slideshow={"slide_type": ""}
 #calib_BQ.Bemd_hists.select(c=[-2**1, -2**-1, -2**-3, 0, 2**-3, 2**-1, 2**1])
+
+# %%
+calib_normal.Bemd_hists
+
+# %%
+calib_normal
+
+# %%
+hv.output(calib_normal.overlayed_scatters, dpi=150)
 
 # %%
