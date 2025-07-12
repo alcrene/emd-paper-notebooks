@@ -16,15 +16,17 @@
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
 # ---
 # math:
+#     '\RR'   : '\mathbb{R}'
+#     '\nN'   : '\mathcal{N}'
 #     '\Bemd' : 'B^{\mathrm{EMD}}_{#1}'
 #     '\Bconf': 'B^{\mathrm{epis}}_{#1}'
 #     '\BQ' : 'B^{Q}_{#1}'
-#     '\nN'   : '\mathcal{N}'
 #     '\Unif' : '\operatorname{Unif}'
 #     '\Mtrue': '\mathcal{M}_{\mathrm{true}}'
 # ---
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
+# (code_calibrating-with-BQ)=
 # # Rejection probability is not predicted by loss distribution
 #
 # {{ prolog }}
@@ -35,69 +37,85 @@
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
 # > **NOTE** Within Jupyter Lab, this notebook is best displayed with [`jupyterlab-myst`](https://myst-tools.org/docs/mystjs/quickstart-jupyter-lab-myst).
 #
-# > **NOTE** This notebook is synced with a Python file using [Jupytext](https://jupytext.readthedocs.io/). **That file is required** to run this notebook, and it must be in the current working directory.
-#
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # This notebook explores a similar question as [](#code_aleatoric-cannot-substitute-epistemic), namely why we cannot use the loss distribution directly and instead really need to estimate the epistemic distribution.
 #
-# Here we explore the question in the context of our calibration experiments. Ultimately the goal is to predict the probability that a replication of the experiment would select model $A$ over model $B$, and this is exactly what our calibration experiments test (with synthetic replications). So if we can replace $\Bemd{}$ by a hypothetical $\BQ{}$ defined solely in terms of the loss distribution and still finding a correlation with $\Bconf{}$, that would suggest that we don’t really need $\Bemd{}$ (which depends on a more complicated distribution and ad hoc parameter $c$) – we could get away with considering just the loss distribution, which is much simpler and therefore more appealing.
+# Here we explore the question in the context of our calibration experiments. Ultimately the goal is to predict the probability that a replication of the experiment would select model $A$ over model $B$, and this is exactly what our calibration experiments test (with synthetic replications). So if we can replace $\Bemd{}$ by a hypothetical $\BQ{}$ defined solely in terms of the loss distribution and still find a correlation with $\Bconf{}$, that would suggest that we don’t really need $\Bemd{}$ (which depends on a more complicated distribution and ad hoc parameter $c$) – we could get away with considering just the loss distribution, which is much simpler and therefore more appealing.
 #
 # Of course, there is no reason to expect that the loss distribution (which is a result of aleatoric uncertainty) will be related to *replication* uncertainty – indeed, that is the point of the [aforementioned notebook](#code_aleatoric-cannot-substitute-epistemic). But the question gets asked, so in addition to arguing on the basis of principle, it is good to tackle the question head-on, in the most direct way possible, with an actual experiment.
 #
-# One challenge is how best to define $B^Q$: since it measures aleatoric instead of replication/epistemic uncertainty, there is no ontologically obvious way to do this. So instead we will use the _mathematically_ obvious way and “hope for the best”:[^ml-research] we match the form of [](#eq_Bemd_def), replacing the $R$-distribution by the $Q$-distribution:
+# One challenge is how best to define $B^Q$: since it measures aleatoric instead of replication/epistemic uncertainty, there is no ontologically obvious way to do this. So instead we will use the _mathematically_ obvious way[^arbitrary-functional] and “hope for the best”:[^ml-research] we match the form of [](#eq_Bemd_def), replacing the $R$-distribution by the $Q$-distribution:
 #
-# $$\BQ{AB;c_Q} := P(Q_A < Q_B + c_Q)\,.$$ (eq_BQ_def)
+# $$
+# \BQ{AB;c_Q} &:= P(Q_A < Q_B + η)\,, \\
+# η &\sim \nN(0, c_Q^2) \,.
+# $$ 
+#
+# :::{margin}
+# This is given {eq}`eq_BQ_def` in the [supplementary material](#sec_why-not-BQ).
+# :::
 #
 # Note that now the probability now is over the samples of $\Mtrue$ rather than over replications.
-# The parameter $c_Q$ is an additional degree of freedom; we include it so that both $\BQ{}$ and $\Bemd{}$ have the same number of free parameters, and thus make the comparison more fair. In practice we will select the $c_Q$ which maximizes the correlation with $\Bconf{}$, thus giving $\BQ{}$ the best chance to match the performance of $\Bemd{}$.
+# The parameter $c_Q$ is an additional degree of freedom; it effectively convolves the $Q$ distributions with a Gaussian, thus increasing their spread and, (similar to the effect of $c$ on $\Bemd{}$) decreasing the sensitivity of $\BQ{}$.
+# We include $η$ so that both $\BQ{}$ and $\Bemd{}$ have the same number of free parameters, and thus make the comparison more fair. We will select the $c_Q$ which maximizes the correlation with $\Bconf{}$, thus giving $\BQ{}$ the best chance to match the performance of $\Bemd{}$.
 #
 # The advantage of [](#eq_BQ_def) is that it is easily estimated from observed samples, with no need to define an ad hoc distribution over quantile functions.
-# The disadvantage is that it does not capture the effect of misspecification on the ability of a model to replicate. As we will see below, this makes it a very poor predictor for $\Bconf{}$.
+# The disadvantage is that it replaces an ad hoc distribution by an ad hoc ontology, since there is no clear link between the distribution of $Q$ values and the ability of a model to replicate.
+# (The two are not unrelated, but the relation is highly confounded by the aleatoric uncertainty.)
+# As we will see below, this makes it a poor predictor for $\Bconf{}$.
 #
 # Note also that appropriate values of $c_Q$ are entirely dependent on what the typical values of the loss are.
 # If the loss is given in terms of a probability density, rather than a probability mass, then this is not scale independent.
 # There is even less reason to expect the values of $c_Q$ therefore to generalize to other problems, in contrast to what we observed with $\Bemd{}$.
 #
-# Of course, given the highly nonlinear shape of loss distributions, we actually expect that the appropriate "correction factor" would not be a constant shift but a function of $Q_A$ and $Q_B$, boosting the difference in some areas and reducing it in others. Such a function however would have infinitely more degrees of freedom than the simple $c$ scaling we propose with $\Bemd{}$. In fact, if we say that our hypothesis is just that there exists _some_ functional $B(Q_A,Q_B) \to \RR$ which correlates with $\Bconf{}$, then the $\Bemd{}$ is subsumed in that hypothesis, with the infinite-dimensional functional space reduced to a single scalar parameter $c$.
+# [^arbitrary-functional]: A direct comparison of $Q_A$ and $Q_B$ may be ad hoc, but it is difficult to imagine a better criterion which doesn’t also introduce more free parameters. We can of course posit that there exists _some_ functional $B(Q_A,Q_B) \to \RR$ which correlates with $\Bconf{}$, but then the $\Bemd{}$ is subsumed in that hypothesis – with the difference that $\BQ{}$ has infinitely many free parameters, while $\Bemd{}$ has only the scalar parameter $c$.
 # For this reason we think that $\BQ{}$ as defined in [](#eq_BQ_def) is the fairest expression of a comparison criterion which uses $Q_A$ and $Q_B$ directly, with no further assumptions.
 #
-#
-# [^ml-research]: Incidentally, this “match the form and hope for the best” is not uncommon in the machine learning literature, and partly explains the inconsistent results with attempts at getting models to generalize.
+# [^ml-research]: Incidentally, this “match the form and hope for the best” is not uncommon in the machine learning literature…
 
 # %% [markdown]
-# ## Load the epistemic dists used in the calibration experiments
-
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-input"]
-# from Ex_Prinz2004 import EpistemicDist, L_data, Linf, colors, dims
-# from config import config
-
-# %%
-import viz
-import viz.emdcmp
-
-# %%
-from functools import partial
-from itertools import chain
-
-# %% [markdown]
-# Load the customized calibration task which computes $\BQ{}$ instead of $\Bemd{}$.
-
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-input"]
-# from task_bq import CalibrateBQ, calib_point_dtype
+# ## Imports
 
 # %%
 import numpy as np
 
 # %%
-import emdcmp
+from functools import partial
+from itertools import chain
 
 # %%
 import holoviews as hv
 hv.extension("matplotlib", "bokeh")
 
+# %% [markdown]
+# `emdcmp` library
+
+# %%
+import emdcmp
+
+# %% [markdown]
+# Project code
+
+# %%
+from config import config
+import viz
+import viz.emdcmp   # Backported updates to emdcmp.viz
+
+# %% [markdown]
+# Load the epistemic dists used in the calibration experiments
+
+# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-input"]
+# from Ex_Prinz2004 import EpistemicDist, L_data, Linf, colors, dims
+
+# %% [markdown]
+# Load the [customized calibration task](./task_bq.md) which computes $\BQ{}$ instead of $\Bemd{}$.
+
+# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-input"]
+# from task_bq import CalibrateBQ, calib_point_dtype
+
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# ### Execution
+# ## Execution
 
 # %% [markdown]
 # :::{admonition} How many experiments
@@ -110,28 +128,12 @@ hv.extension("matplotlib", "bokeh")
 # :::
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# Full list of epistemic dists. This is more than is useful for testing the $\BQ{}$ variant of risk distributions.
-#
-# ```python
-# N = 64
-# #N = 512
-# Ωdct = {(f"{Ω.a} vs {Ω.b}", Ω.ξ_name, Ω.σo_dist, Ω.τ_dist, Ω.σi_dist): Ω
-#         for Ω in (EpistemicDist(N, a, b, ξ_name, σo_dist, τ_dist, σi_dist)
-#                   for (a, b) in [("A", "B"), ("A", "D"), ("C", "D")]
-#                   for ξ_name in ["Gaussian", "Cauchy"]
-#                   for σo_dist in ["low noise", "high noise"]
-#                   for τ_dist in ["short input correlations", "long input correlations"]
-#                   for σi_dist in ["weak input", "strong input"]
-#             )
-#        }
-# ```
-#
-# Instead we only run the experiments on the 6 epistemic distributions used in the main paper.
+# We only run the experiments on the 6 epistemic distributions used in the main paper.
 
 # %%
-N = 64
-N = 128
-N = 512
+#N = 64
+#N = 128
+#N = 512
 N = 2048
 Ωdct = {(f"{Ω.a} vs {Ω.b}", Ω.ξ_name, Ω.σo_dist, Ω.τ_dist, Ω.σi_dist): Ω
         for Ω in [
@@ -151,7 +153,6 @@ N = 2048
 # :::
 
 # %% editable=true slideshow={"slide_type": ""}
-c_chosen = 2**-2
 c_list = [2**-6, 2**-4, 2**-2, 2**0, 2**2, 2**4]
 LQ = 4000 # Number of draws for the Monte Carlo estimate of normal dist addition
 
@@ -288,7 +289,7 @@ calibs_BQ     = {key: viz.emdcmp.calibration_plot(task.unpack_results(task.run()
                  for key, task in tasks_BQ.items()}
 
 
-# %%
+# %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
 def mkkey(taskkey): return taskkey[0], taskkey[4]
 taskdims = ["models", "input"]
 hm = hv.HoloMap({("EMD", "Bemd", c, *mkkey(taskkey)): hist for taskkey, calplot in calibs_normal.items() for c, hist in calplot.Bemd_hists.items()}
@@ -303,14 +304,14 @@ hm.select(uncertainty="EMD").overlay("B").layout(taskdims).cols(3).opts(
     hv.opts.Histogram(backend="matplotlib", aspect=2)
 )
 
-# %%
+# %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
 hm.select(uncertainty="Q").overlay("B").layout(taskdims).cols(3).opts(
     hv.opts.Layout(backend="matplotlib", fig_inches=3, tight=True),
     hv.opts.NdLayout(backend="matplotlib", fig_inches=3, tight=True),
     hv.opts.Histogram(backend="matplotlib", aspect=2)
 )
 
-# %%
+# %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
 fig = hm.select(uncertainty="EMD", B="Bemd").drop_dimension(["uncertainty", "B"]).overlay("c") \
       + hm.select(uncertainty="Q", B="Bemd").drop_dimension(["uncertainty", "B"]).overlay("c")\
         .redim(Bemd="BQ").opts(title="BQ")
@@ -319,7 +320,7 @@ fig.opts(hv.opts.Layout(backend="matplotlib", fig_inches=2, sublabel_format=""),
          hv.opts.NdOverlay(legend_position="best")
         )
 
-# %%
+# %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
 calibopts = (
     hv.opts.Overlay(backend="matplotlib",
                     #legend_cols=3,
@@ -335,7 +336,7 @@ calibopts = (
 )
 
 
-# %% jupyter={"source_hidden": true}
+# %% jupyter={"source_hidden": true} editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
 def format_calib_curves(panels, tasks):
     assert len(panels) == 6
     top_row = panels[:3]
@@ -382,7 +383,7 @@ def format_calib_curves(panels, tasks):
     return panels
 
 
-# %%
+# %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
 def mkkey(taskkey): return taskkey[0], taskkey[4]
 taskdims = ["models", "input"]
 hm = hv.HoloMap({("EMD", "Bemd", float(scat.label[2:]), *mkkey(taskkey)): scat
@@ -394,13 +395,18 @@ hm = hv.HoloMap({("EMD", "Bemd", float(scat.label[2:]), *mkkey(taskkey)): scat
                 kdims=["uncertainty", "B", "c", *taskdims])
 hm.select(uncertainty="EMD")
 
-# %%
+# %% [markdown] editable=true slideshow={"slide_type": ""}
+# (code_calibrating-with-BQ_plot)=
+
+# %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
 fig = hv.Layout(
-    format_calib_curves([calplot.overlayed_scatters for calplot in calibs_normal.values()],
+    format_calib_curves([calplot.overlayed_scatters.redim(Bemd=hv.Dimension("Bemd", label=r"$B^{\mathrm{EMD}}$"))
+                         for calplot in calibs_normal.values()],
                         list(tasks_normal.values()))
-).cols(3).opts(*calibopts, hv.opts.Scatter(backend="matplotlib", s=20),
+).cols(3).opts(*calibopts, hv.opts.Scatter(backend="matplotlib", s=12),
                #hv.opts.Overlay(legend_position="left", legend_cols=1)
                hv.opts.Overlay(show_legend=False),
+               hv.opts.Layout(fig_inches=1.15)
               )
 display(fig)
 # The legend will use Curve data, which are all grey dotted lines.
@@ -410,41 +416,39 @@ display(fig)
 #    fig_inches=0.01,
 #    hooks=[viz.xaxis_off_hook, viz.yaxis_off_hook])
 
-# %%
+# %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
+hv.save(fig, config.paths.figures/"Bemd_prinz_calib-scatter_6panel.svg")
+
+# %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
 fig = hv.Layout(
     format_calib_curves([calplot.overlayed_scatters.redim(Bemd=hv.Dimension("BQ", label="$B^Q$"))
                          for calplot in calibs_BQ.values()],
                         list(tasks_BQ.values()))
-).cols(3).opts(*calibopts, hv.opts.Scatter(backend="matplotlib", s=20),
+).cols(3).opts(*calibopts, hv.opts.Scatter(backend="matplotlib", s=12),
                #hv.opts.Layout(backend="matplotlib", hspace=-0.2, vspace=.1),
-               hv.opts.Overlay(show_legend=False))
+               hv.opts.Overlay(show_legend=False),
+               hv.opts.Layout(fig_inches=1.15)
+              )
 display(fig)
 
-# %%
+# %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
+hv.save(fig, config.paths.figures/"BQ_prinz_calib-scatter_6panel.svg")
+
+# %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
 legend = hv.Overlay(
     [next(iter(plot.Scatter.values())).clone()
      for (c,), plot in next(iter(calibs_normal.values())).scatters.overlay("c").data.items()])
-legend.opts(
-    hv.opts.Overlay(fig_inches=0.01, fontscale=2),
-    hv.opts.Scatter(hooks=[viz.xaxis_off_hook, viz.yaxis_off_hook], s=40)
+c_values = hv.Table([(c, np.log2(c)) for c in c_list], kdims=["c"], vdims=["log2(c)"])
+(legend + c_values).opts(
+    hv.opts.Overlay(fontscale=2), # fig_inches=0.01
+    hv.opts.Scatter(hooks=[viz.xaxis_off_hook, viz.yaxis_off_hook], s=40, xlim=(0,.01), ylim=(0,.01)),
+    hv.opts.Layout(sublabel_format="")
 )
 
-# %%
-hv.Layout(
-    format_calib_curves([calplot.scatters[1]*calplot.scatters[4]
-                         for calplot in calibs_normal.values()],
-                        list(tasks_normal.values()))
-).cols(3).opts(*calibopts, hv.opts.Scatter(backend="matplotlib", s=20),
-               hv.opts.Layout(backend="matplotlib", hspace=0.1, vspace=.02))
+# %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
+hv.save(legend, config.paths.figures/"BQ-to-Bemd-comparison_legend.svg")
 
-# %%
-hv.Layout(
-    format_calib_curves([calplot.scatters[c_chosen] for calplot in calibs_BQ.values()],
-                        list(tasks_BQ.values()))
-).cols(3).opts(*calibopts, hv.opts.Scatter(backend="matplotlib", s=20),
-               hv.opts.Layout(backend="matplotlib", hspace=0.1, vspace=.02))
-
-# %%
+# %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
 # Print panel descriptions
 from tabulate import tabulate
 headers = ["models", "input corr", "input strength", "obs noise", "obs dist"]
@@ -453,331 +457,5 @@ data = [(f"Panel ({lbl})",
         for lbl, task in zip("abcdef", tasks_BQ.values())]
 print(tabulate(data, headers, tablefmt="simple_outline"))
 
-# %% [markdown] editable=true slideshow={"slide_type": ""}
-# ## EMD model comparison
-#
-# First we recreate `synth_ppf` and `mixed_ppf`.
-
-# %%
-from addict import Dict
-
-# %%
-from Ex_Prinz2004 import Q, fit_gaussian_σ, LP_data, phys_models, AdditiveNoise, generate_synth_samples
-import utils
-
-# %%
-candidate_models = Dict()
-Qrisk = Dict()
-for a in "ABCD":
-    fitted_σ = fit_gaussian_σ(LP_data, phys_models[a], "Gaussian")
-    candidate_models[a] = utils.compose(AdditiveNoise("Gaussian", fitted_σ),
-                                        phys_models[a])
-    Qrisk[a] = Q(phys_model=phys_models[a], obs_model="Gaussian", σ=fitted_σ)
-
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
-# synth_ppf = Dict({
-#     a: emdcmp.make_empirical_risk_ppf(Qrisk[a](generate_synth_samples(candidate_models[a])))
-#     for a in "ABCD"
-# })
-# mixed_ppf = Dict({
-#     a: emdcmp.make_empirical_risk_ppf(Qrisk[a](LP_data.get_data()))
-#     for a in "ABCD"
-# })
-
-# %% [markdown]
-# Sample of a set of expected risks ($R$) for each candidate model.
-
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
-# R_samples = {
-#     c: Dict(
-#         A = emdcmp.draw_R_samples(mixed_ppf.A, synth_ppf.A, c=c),
-#         B = emdcmp.draw_R_samples(mixed_ppf.B, synth_ppf.B, c=c),
-#         C = emdcmp.draw_R_samples(mixed_ppf.C, synth_ppf.C, c=c),
-#         D = emdcmp.draw_R_samples(mixed_ppf.D, synth_ppf.D, c=c)
-#     )
-#     for c in [2**-6, 2**-4, 2**-2, 2**0, 2**2, 2**4]
-# }
-
-# %% [markdown] editable=true slideshow={"slide_type": ""}
-# Convert the samples into a distributions using a kernel density estimate (KDE).
-
-# %%
-# viz.format_pow2?
-
-# %%
-hv.Layout([
-    hv.Overlay([hv.Distribution(samples, kdims=hv.Dimension("R", label="$R$")) for samples in R_samples[c].values()],
-               label=f"$c={viz.format_pow2(c, format='latex')}$")
-    for c in R_samples
-]).cols(1).opts(
-    hv.opts.Overlay(aspect=3),
-    hv.opts.Distribution(facecolor=colors.LP_candidates, edgecolor=colors.LP_candidates),
-    hv.opts.Layout(fig_inches=3.5, shared_axes=False, sublabel_format="", tight=True)
-).cols(3)
-
-# %%
-yticks = [[0, 15, 30],
-          [0, 10, 20],
-          [0, 4, 8],
-          [0, 2, 4],
-          [0, 1, 2],
-          [0, 0.5, 1]]
-ylims = [(0, 30), (0, 20), (0, 8), (0, 4.5), (0, 2), (0, 1)]
-xticks = [[4.2, 4.3, 4.4, 4.5],
-          [4.0, 4.2, 4.4, 4.6],
-          [3.8, 4.0, 4.2, 4.6, 4.8, 5.0],
-          [3.5, 4.0, 4.5, 5.0, 5.5],
-          [3, 4, 5, 6, 7],
-          [2, 4, 6, 8, 10]]
-          
-fig = hv.HoloMap(
-    {c: viz.make_Rdist_fig(
-        R_samples[c],
-        colors     =colors.LP_candidates,
-        xticks     =_xticks,
-        #xticklabels=["2", "", "6", "" ,"10"],
-        yticks     =_yticks,
-        #yticklabels=["0", "", "", "6"]
-        #xlabelshift=0,
-        #ylabelshift=0
-        ).opts(hv.opts.Overlay(ylim=_ylim))
-     for c, _xticks, _yticks, _ylim in zip(R_samples, xticks, yticks, ylims)
-     },
-    kdims=["c"]
-)
-fig.opts(framewise=True)
-
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
-# xticks = [3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7]
-# fig_Rdists = viz.make_Rdist_fig(
-#     R_samples,
-#     colors     =colors.LP_candidates,
-#     xticks     =xticks,
-#     xticklabels=["", "", "4.0", "" ,"", "", "", "", "4.6", ""],
-#     yticks     =[0, 2, 4, 6],
-#     yticklabels=["0", "", "", "6"],
-# )
-# fig_Rdists
-
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-cell"]
-#     Rdists = [hv.Distribution(_Rlst, kdims=[dims.R], label=f"Model {a}")
-#               for a, _Rlst in R_samples.items()]
-#     Rcurves = [hv.operation.stats.univariate_kde(dist).to.curve()
-#                for dist in Rdists]
-#     fig_Rdists = hv.Overlay(Rdists) * hv.Overlay(Rcurves)
-#     
-#     xticks = [round(R,1) for R in np.arange(3, 5, 0.1) if (low:=fig_Rdists.range("R")[0]) < R < (high:=fig_Rdists.range("R")[1])]
-#     xticklabels = [str(R) if R in (4.0, 4.6) else "" for R in xticks]
-
-# %% editable=true slideshow={"slide_type": ""} tags=["hide-input", "active-ipynb", "remove-cell"]
-#     # Plot styling
-#     yticks = [0, 2, 4, 6]
-#     yticklabels = ["0", "", "", "6"]
-#     fig_Rdists.opts(
-#         hv.opts.Distribution(alpha=.3),
-#         hv.opts.Distribution(facecolor=colors.LP_candidates, color="none", edgecolor="none", backend="matplotlib"),
-#         hv.opts.Curve(color=colors.LP_candidates),
-#         hv.opts.Curve(linestyle="solid", backend="matplotlib"),
-#         hv.opts.Overlay(backend="matplotlib", fontscale=1.3,
-#                         hooks=[viz.set_xticks_hook(xticks), viz.set_xticklabels_hook(xticklabels), viz.ylabel_shift_hook(5),
-#                                viz.set_yticks_hook(yticks), viz.set_yticklabels_hook(yticklabels), viz.xlabel_shift_hook(7),
-#                                viz.despine_hook(2)],
-#                         legend_position="top_left", legend_cols=1,
-#                         show_legend=False,
-#                         xlim=fig_Rdists.range("R"),  # Redundant, but ensures range is not changed
-#                         #fig_inches=config.figures.defaults.fig_inches)  # Previously: was 1/3 full width
-#                         aspect=3
-#                        )
-#     )
-
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "hide-input"]
-# # First line: means of the R f
-# # Second line: expected risk computed on the original data
-# #Rmeans = hv.Spikes([(Rlst.mean(), 2, a) for a, Rlst in R_samples.items()],
-# Rmeans = hv.Spikes([(Qrisk[a](LP_data.get_data()).mean(), 2, a) for a in R_samples.keys()],
-#                      kdims=dims.R, vdims=["height", "model"], group="back")
-# # Display options
-# dashstyles = {"A": (0, (4, 4)), "B": (4, (4, 4)),
-#               "C": (0, (3.5, 4.5)), "D": (4, (3.5, 4.5))}
-# model_colors = {a: c for a, c in zip("ABCD", colors.LP_candidates.values)}
-#
-# # Because the C and D models are so close, the lines are very difficult to differentiate
-# # To make this easier, we overlay with interleaved dashed lines.
-# # NB: Key to making this visually appealing is that we leave a gap between
-# #     the dash segments
-# Rmeans_front = hv.Overlay([
-#     hv.Spikes([(R, h, a)], kdims=Rmeans.kdims, vdims=Rmeans.vdims,
-#               group="front", label=f"Model {a}")
-#     .opts(backend="matplotlib", linestyle=dashstyles[a])
-#     for R, h, a in Rmeans.data.values])
-# # NB: Current versions don’t seem to include Spikes in the legend.
-# #     Moreover, the shifted dash style means that for B and D the line is not printed in the legend
-# legend_proxies = hv.Overlay([hv.Curve([(R, 0, a)], group="proxy", label=f"Model {a}")
-#                              for R, h, a in Rmeans.data.values])
-# fig_Rmeans = Rmeans * Rmeans_front * legend_proxies
-#
-# fig_Rmeans.opts(
-#     hv.opts.Spikes(color=hv.dim("model", lambda alst: np.array([model_colors[a] for a in alst]))),
-#     hv.opts.Spikes("back", alpha=0.5),
-#     hv.opts.Spikes(backend="matplotlib", linewidth=2, hooks=[viz.yaxis_off_hook]),
-#     hv.opts.Overlay(backend="matplotlib",
-#                     show_legend=True, legend_position="bottom_left",
-#                     xticks=xticks,
-#                     hooks=[viz.set_xticklabels_hook(""), viz.despine_hook(0), viz.yaxis_off_hook],
-#                     xlim=fig_Rdists.range("R"),
-#                     aspect=6)
-# )
-
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "hide-input"]
-# # Why aren’t the fontsizes consistent across panels ? No idea...
-# fig = (fig_Rmeans.opts(fontscale=1.3, sublabel_position=(-.25, .4), show_legend=False, xlabel="")
-#        + fig_Rdists.opts(sublabel_position=(-.25, .9), show_legend=True))
-# fig.opts(shared_axes=True, tight=False, aspect_weight=True,
-#          sublabel_format="", sublabel_size=12,
-#          vspace=0.1,
-#          fig_inches=config.figures.defaults.fig_inches)
-# fig.cols(1)
-
-# %% editable=true slideshow={"slide_type": ""} tags=["remove-cell", "active-ipynb"]
-# viz.save(fig, config.paths.figures/f"prinz_Rdists_raw.svg")
-
-# %% [markdown] editable=true slideshow={"slide_type": ""}
-# Things to finish in Inkscape:
-# - ~~Fix alignment of sublabels~~
-# - ~~Make sublabels bold~~
-# - Trim unfinished dashed lines in the R means
-# - Extend lines for R means into lower panel
-# - Confirm that alignment of x axes pixel perfect
-# - ~~Tighten placement of xlabel~~
-# - Save to PDF
-
-# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
-# Bigger version; appropriate for HTML or slides.
-
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-cell"]
-# vlines = hv.Overlay([hv.VLine(R).opts(color=model_colors[a])
-#                      for R, _, a in fig_Rmeans.data['Back', 'I'].data.values])
-# fig2 = (fig_Rmeans.opts(clone=True, fontscale=2, show_legend=False, sublabel_position=(-.215, .4))
-#                   .opts(hv.opts.Spikes(linewidth=4))
-#        + (vlines*fig_Rdists).opts(clone=True, fontscale=2, show_legend=True, sublabel_position=(-.25, .9))
-#                             .opts(hv.opts.VLine(linewidth=4, alpha=0.5)))
-# fig2[1].opts(fig_Rdists.opts.get())
-# fig2[1].opts(show_legend=False)
-# fig2[0].opts(show_legend=True)
-# fig2[0].opts(backend="matplotlib", legend_position='top_left',
-#              legend_opts={'framealpha': 1, 'borderpad': 1,
-#                           'labelspacing': .5,
-#                           'bbox_to_anchor': (-.02, 1)})  # NB: 'loc' is ignored; use legend_position
-# fig2.opts(shared_axes=True, tight=False, aspect_weight=True,
-#           sublabel_format="", sublabel_size=18,
-#           vspace=0,  # For some reason, negative vspace doesn’t work
-#           fig_inches=5.5)
-# viz.save(fig2, config.paths.figures/f"prinz_Rdists_big.svg")
-# fig2.cols(1)
-
-# %% [markdown] editable=true slideshow={"slide_type": ""}
-# EMD estimates for the probabilities $P(R_a < R_b)$ are nicely summarized in a table:
-
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
-# df = emd.utils.compare_matrix(R_samples)
-
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "hide-input"]
-# df.index = pd.MultiIndex.from_tuples([("a", a) for a in df.index])
-# df.columns = pd.MultiIndex.from_tuples([("b", b) for b in df.columns])
-# df.style.format(precision=3)
-
-# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
-# For pasting into a MyST file, we reformat as a [list-table](https://jupyterbook.org/en/stable/reference/cheatsheet.html?highlight=list-table#tables):
-
-# %% editable=true slideshow={"slide_type": ""} tags=["skip-execution", "remove-cell", "active-ipynb"]
-# print(":::{list-table}")
-# model_labels = list(R_samples)
-# print(":header-rows: 1")
-# print(":stub-columns: 1")
-# print("")
-#
-# print(f"* - ")
-# for a in model_labels:
-#     print(f"  - {a}")
-# for a in model_labels:
-#     print(f"* - {a}")
-#     for Pab in df.loc[("a", a),:]:
-#         print(f"  - {Pab:.3f}")
-# print(":::")
-
-# %% [markdown] editable=true slideshow={"slide_type": ""}
-# :::{admonition} `compare_matrix` implementation
-# :class: note dropdown
-#
-# The `compare_matrix` function provided by `emdcmp` simply loops through all $(a,b)$ model pairs, and counts the number of $R_a$ samples which are larger than $R_b$:
-#
-# ```python
-# def compare_matrix(R_samples: Dict[str, ArrayLike]) -> pd.DataFrame:
-#     R_keys = list(R_samples)
-#     compare_data = {k: {} for k in R_keys}
-#     for i, a in enumerate(R_keys):
-#         for j, b in enumerate(R_keys):
-#             if i == j:
-#                 assert a == b
-#                 compare_data[b][a] = 0.5
-#             elif j < i:
-#                 compare_data[b][a] = 1 - compare_data[a][b]
-#             else:
-#                 compare_data[b][a] = np.less.outer(R_samples[a], R_samples[b]).mean()
-#     return pd.DataFrame(compare_data)
-# ```
-# :::
-
-# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
-# ## Exported notebook variables
-#
-# These can be inserted into other pages.
-
-# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-cell"]
-# glue("AB_model", AB_model_label, display=True)
-# glue("c_chosen_prinz", c_chosen, raw_myst=viz.format_pow2(c_chosen, format='latex'), raw_latex=viz.format_pow2(c_chosen, format='latex'))
-#
-# glue("N", N, display=True)
-# glue("Linf", viz.format_pow2(Linf), display=True)
-# glue("Ldata", L_data, display=True)
-#
-# #glue("noise_model", Ω.ξ_dist, display=True)
-# #glue("noise_bias", Ω.μ_dist, display=True)
-# #glue("noise_width", Ω.σ_dist, display=True)
-#
-# glue("calib_curve_palette", config.emd.viz.matplotlib.calibration_curves["color"].key, display=True)
-#
-# # Epistemic hyperparameters
-# glue("tau_short_min"   , **viz.formatted_quantity(EpistemicDist.τ_short_min ))
-# glue("tau_short_max"   , **viz.formatted_quantity(EpistemicDist.τ_short_max ))
-# glue("tau_long_min"    , **viz.formatted_quantity(EpistemicDist.τ_long_min  ))
-# glue("tau_long_max"    , **viz.formatted_quantity(EpistemicDist.τ_long_max  ))
-# glue("sigmao_low_mean" , **viz.formatted_quantity(EpistemicDist.σo_low_mean ))
-# glue("sigmao_high_mean", **viz.formatted_quantity(EpistemicDist.σo_high_mean))
-# glue("sigmao_std"      , **viz.formatted_quantity(EpistemicDist.σo_std      ))
-# glue("sigmai_weak_mean", **viz.formatted_quantity(EpistemicDist.σi_weak_mean ))
-# glue("sigmai_strong_mean", **viz.formatted_quantity(EpistemicDist.σi_strong_mean))
-# glue("sigmai_std"      , **viz.formatted_quantity(EpistemicDist.σi_std      ))
-
-# %% [markdown]
-#     'AB/PD 3'
-#     0.25
-#     512
-#     '2¹⁴'
-#     4000
-#     'copper'
-#     '0.1 \\mathrm{ms}'
-#     '0.2 \\mathrm{ms}'
-#     '1.0 \\mathrm{ms}'
-#     '2.0 \\mathrm{ms}'
-#     '0.0 \\mathrm{mV}'
-#     '1.0 \\mathrm{mV}'
-#     '0.5 \\mathrm{mV}'
-#     '-15.0 \\mathrm{mV}'
-#     '-10.0 \\mathrm{mV}'
-#     '0.5 \\mathrm{mV}'
-
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-input"]
-emd.utils.GitSHA()
-
-# %% editable=true slideshow={"slide_type": ""}
+emdcmp.utils.GitSHA(packages=["emdcmp", "pyloric-network-simulator"])
