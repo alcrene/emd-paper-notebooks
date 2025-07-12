@@ -649,7 +649,7 @@ with shelve.open(str(config.paths.data/"Rdists-model-compare")) as shelf:
                 shelfkey = f"{phys} - {L} - {m}"
                 shelf[shelfkey] = Rdists[phys, m, L] = Rsamples
 
-# %% editable=true slideshow={"slide_type": ""} tags=["remove-cell", "active-py"] raw_mimetype=""
+# %% editable=true raw_mimetype="" slideshow={"slide_type": ""} tags=["remove-cell", "active-py"]
 import sys; sys.exit()
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]

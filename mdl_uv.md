@@ -147,8 +147,11 @@ $$
 \log_2(x)
 &= \log_2\Bigl(2^{b} \Bigl\lfloor\frac{x}{2^b}\Bigr\rfloor + x \mathop{\%} 2^b \Bigr) \\
 &= b + \log_2\Bigl(\Bigl\lfloor\frac{x}{2^b}\Bigr\rfloor + \frac{x \mathop{\%} 2^b}{2^b} \Bigr) \\
-&< b + \log_2\Bigl(1 + \Bigl\lfloor\frac{x}{2^b}\Bigr\rfloor\Bigr) \\
-&\approx b + \log_2\Bigl(\Bigl\lfloor\frac{x}{2^b}\Bigr\rfloor\Bigr) \,,
+b + \log_2\Bigl(\Bigl\lfloor\frac{x}{2^b}\Bigr\rfloor\Bigr)
+\leq \log_2(x)
+  &\leq b + \log_2\Bigl(1 + \Bigl\lfloor\frac{x}{2^b}\Bigr\rfloor\Bigr) \\
+\log_2(x)
+  &\approx b + \log_2\Bigl(\Bigl\lfloor\frac{x}{2^b}\Bigr\rfloor\Bigr) \,,
 $$
 
 where the approximation holds as long as $\bigl\lfloor\frac{x}{2^b}\bigr\rfloor \gg 1$. CPython uses 30 bits per digit for its arbitrary-precision integers, so below we will use $b=30$. We can stop dividing once the value fits into a float, i.e. when $x \lessapprox 10^{30}$, which is plenty large to ensure $\bigl\lfloor\frac{x}{2^b}\bigr\rfloor \gg 1$.
@@ -348,13 +351,15 @@ def get_multiple_rnd_idcs(sizes, tot_index, num, rng=None) \
 ## Computing the multplicity of an index class $\iI_k$.
 This is equivalent to counting the number of ways of placing $k$ balls into $L$ bins, each with capacity $\lvert \Bspec_j \rvert$.
 
-:::{important} Notation
+:::{admonition} Notation
+:class: important
 For brevity, this section defines $s_j = \lvert \Bspec_j \rvert$ for the number of possible values at $λ_j$.
 The ordered set of all sizes is $\vec{s} := (s_1, \dotsc, s_{L})$.
 The multiplicity of an index class is $m(\vec{s}, k) := \lvert \iI_k \rvert$.
 :::
 
-:::{note} Multiplicity sequences are symmetric
+:::{admonition} Multiplicity sequences are symmetric
+:class: note
 We can halve the required function evaluations (and thus cache memory) with one simple trick™: if $m$ is the `index_multiplicity` function, then we always have
 
 $$m(s_1, \dots, s_L; k) = m(s_1, \dots, s_L; \sum_j s_j - L - k) \,.$$ (eq_totindex-symmetry)
@@ -542,7 +547,8 @@ k   & [4 4 4] &            & [4 4 5] &           & [4 5 5] \\
 \end{array}$$
 
 ::::{margin}
-:::{note} Acknowledgment
+:::{admonition} Acknowledgment
+:class: note
 A heartfelt thanks goes to Marie-Claude Dicaire for having come up with this approach.
 :::
 ::::

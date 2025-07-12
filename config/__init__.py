@@ -7,7 +7,7 @@ from holoviews import Palette
 from valconfig import ValConfig, ensure_dir_exists
 from valconfig.contrib.holoviews import FiguresConfig
 from scityping import Config as ScitypingConfig
-from emd_falsify import Config as EmdConfig
+from emdcmp import Config as EmdConfig
 
 ## Workaround for function deserialization ##
 # Needed because:

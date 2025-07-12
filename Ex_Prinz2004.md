@@ -101,7 +101,7 @@ slideshow:
 ---
 import utils
 import viz
-from pyloric_simulator.prinz2004 import Prinz2004, neuron_models
+from pyloric_network_simulator.prinz2004 import Prinz2004, neuron_models
 from colored_noise import ColoredNoise
 #from viz import dims, save, noaxis_hook, plot_voltage_traces
     # save: Wrapper for hv.save which adds a global switch to turn off plotting
@@ -408,7 +408,7 @@ slideshow:
 class Model:
     """A generic model taking a array of time points to integrate.
     
-    Based on example code from pyloric_simulator.prinz2004
+    Based on example code from pyloric_network_simulator.prinz2004
     Takes an array of time points and outputs the model prediction at those points.
     """
     LP_model: str
@@ -922,7 +922,7 @@ Important also is to tailor the observation model to the specifics of the system
 For simple models with a convex likelihood fitting parameters by maximizing the likelihood is often a good choice. We do this for illustrative reasons: since it it a common choice, it allows us to avoid sidetracking our argument with a discussion on the choice of loss. However, for time series, this choice tends to be over-sensitive to timing: consider a model which is almost correct, but with spikes slightly time shifted. Possibly more robust alternatives would a loss based on look-ahead probabilities (using the voltage trace of the *data* to predict the next observation) or averaging over many input realizations.
 
 In general, more complex models tend to have a less regular likelihood landscape, with sharp peaks and deep valleys. Neural networks are one notorious example of a class of models with very sharp peaks in their likelihood.
-To illustrate one type of situation which can occur, consider the schematic log likelihood sketched below, where the parameter $θ$ has highest likelihood when $θ=3$. However, if there is uncertainty on that parameter, then the steep decline for $θ>3$ would strongly penalize the expected risk. In contrast, the value $θ=1$ is more robust against variations, and its expected risk less strongly penalized.
+To illustrate one type of situation which can occur, consider the schematic log likelihood sketched below, where the parameter $θ$ has highest likelihood when $θ=3$. However, if there is uncertainty on that parameter, then the steep decline for $θ>3$ would strongly penalize the risk. In contrast, the value $θ=1$ is more robust against variations, and its risk less strongly penalized.
 
 ```{glue:figure} fig_sensitivity_max_likelihood
 ```
@@ -1167,7 +1167,7 @@ fig_synth.opts(hv.opts.Curve("synth", color=colors.LP_candidates),
 The EMD criterion works by comparing a *synthetic PPF* with a *mixed PPF*. The mixed PPF is obtained with the same risk function but evaluated on the actual data.
 - Compared to the synthetic PPFs, now see more marked differences between the PPFs of the different models.
 - If the theoretical models are good, differences between synthetic and mixed PPFs can be quite small. They may only be visible by zooming the plot. This is fine – in fact, models which are very close to each other are easier to calibrate, since it is easier to generate datasets for which either model is an equally good fit.
-- Note that the mixed PPF curves are above the synthetic ones. Although there are counter-examples (e.g. if a model overestimates the variance of the noise), this is generally expected, especially if models are fitted by minimizing the expected risk.
+- Note that the mixed PPF curves are above the synthetic ones. Although there are counter-examples (e.g. if a model overestimates the variance of the noise), this is generally expected, especially if models are fitted by minimizing the risk.
 
 ```{code-cell} ipython3
 ---
@@ -1215,13 +1215,13 @@ hv.output(fig.redim.range(q=(-10, 200)), backend="bokeh")
 :::{caution} Something about this argument feels off; I need to think this through more carefully.
 :::
 
-We can expect that the accuracy of a quantile function estimated from samples will be poorest at the extrema near $Φ=0$ and $Φ=1$: if we have $L$ samples, than the "poorly estimated regions" are roughly $[0, \frac{1}{L+1})$ and $(\frac{L}{L+1}, 1]$. Our goal ultimate is to estimate the expected risk by computing the integral $\int_0^1 q(Φ)$. The contribution of the low extremum region will scale like
+We can expect that the accuracy of a quantile function estimated from samples will be poorest at the extrema near $Φ=0$ and $Φ=1$: if we have $L$ samples, than the "poorly estimated regions" are roughly $[0, \frac{1}{L+1})$ and $(\frac{L}{L+1}, 1]$. Our goal ultimate is to estimate the risk by computing the integral $\int_0^1 q(Φ)$. The contribution of the low extremum region will scale like
 $$ \int_0^{1/L} q(Φ) dΦ \,,$$
 and similarly for the high extremum region. Since we the estimated $q$ function is unreliable within these regions, we their contribution to the full integral to become negligible once we have enough samples:
 $$\int_0^{1/L} q(Φ) dΦ \approx q\Bigl(\frac{1}{L}\Bigr) \cdot \frac{1}{L} \xrightarrow{L\to\infty} 0 \,.$$
 In other words, $q$ may approx $\pm \infty$ at the extrema, but must do so at a rate which is sublinear.
 
-Interestingly, low-dimensional models like the 1-d examples studied in this work seem to be the most prone to superlinear growth of $q$. This is because on low-dimensional distributions, the mode tends to be included in the typical set, while the converse is true in high-dimensional distributions (see e.g. chapter 4 of {cite:t}`mackayInformationTheoryInference2003`). Nevertheless, we found that even in this case, the EMD distribution seems to assign plausible, and most importantly stable, distributions to the expected risk $R$.
+Interestingly, low-dimensional models like the 1-d examples studied in this work seem to be the most prone to superlinear growth of $q$. This is because on low-dimensional distributions, the mode tends to be included in the typical set, while the converse is true in high-dimensional distributions (see e.g. chapter 4 of {cite:t}`mackayInformationTheoryInference2003`). Nevertheless, we found that even in this case, the EMD distribution seems to assign plausible, and most importantly stable, distributions to the risk $R$.
 
 Where things get more dicey is with distributions with no finite moments. For example, if samples are generated by drawing from a Cauchy distribution, then the value of the function in the “poorly estimated region” remains, because as we draw more samples, we keep getting new samples with such enormous risk that they outweigh all the accumulated contributions up to that point. One solution in such cases may simply be to use a risk function which is robust with regards to outliers.
 ::::
@@ -1237,14 +1237,14 @@ We recommend always inspecting quantile functions visually. For examples, if the
 
 ## How many samples do we need ?
 
-Samples are used ultimately to estimate the expected risk. This is done in two ways:
+Samples are used ultimately to estimate the risk. This is done in two ways:
 
 - By integrating the PPF.
 - By directly averaging the risk of each sample.
 
-When computing the $\Bemd{AB;c}$ criterion we use the first approach. During calibration we compare this with $\Bconf{AB}$, which uses the second approach. When computing $\Bconf{AB}$, we ideally use enough samples to reliably determine which of $A$ or $B$ has the highest expected risk.
+When computing the $\Bemd{AB;c}$ criterion we use the first approach. During calibration we compare this with $\Bconf{AB}$, which uses the second approach. When computing $\Bconf{AB}$, we ideally use enough samples to reliably determine which of $A$ or $B$ has the highest risk.
 
-In the figure below we show the expected risk as a function of the number of samples, computed either by constructing the PPF from samples and then integrating it (left) or averaging the samples directly (right). We see that models only start to differentiate at 4000 samples, and curves seem to flatten out around 20000.
+In the figure below we show the risk as a function of the number of samples, computed either by constructing the PPF from samples and then integrating it (left) or averaging the samples directly (right). We see that models only start to differentiate at 4000 samples, and curves seem to flatten out around 20000.
 
 The takeaway from this verification is that a value `Linf=16384` should be sufficient for the calibration. Higher values might make $\Bconf{}$ estimates still a bit more accurate, but at the cost of even longer integration times.
 
@@ -2077,7 +2077,7 @@ hv.output(calib_hist(task).hmap,
 
 $\Bemd{}$ distribution which bulges around 0.5.
 ~ *May* indicate that $c$ is too large and the criterion underconfident.
-~ *May also* indicate that the calibration distribution is generating a large number of (`data`, `modelA`, `modelB`) triples which are essentially undecidable. If neither model is a good fit to the data, then their $δ^{\mathrm{EMD}}$ discrepancies between mixed and synthetic PPFs will be large, and they will have broad distributions for the expected risk. Broad distributions overlap more, hence the skew of $\Bemd{}$ towards 0.5.
+~ *May also* indicate that the calibration distribution is generating a large number of (`data`, `modelA`, `modelB`) triples which are essentially undecidable. If neither model is a good fit to the data, then their $δ^{\mathrm{EMD}}$ discrepancies between mixed and synthetic PPFs will be large, and they will have broad distributions for the risk. Broad distributions overlap more, hence the skew of $\Bemd{}$ towards 0.5.
 
 $\Bemd{}$ distribution which is heavy at both ends.
 ~ *May* indicate that $c$ is too small and the criterion overconfident.
@@ -2090,7 +2090,7 @@ The skew need not be removed entirely – one model may just be more permissive 
 
 $\Bconf{}$ distribution which is almost entirely on either 0 or 1.
 ~ Again, check that the calibration distribution is using both models to generate datasets.
-~ If each candidate is used for half the datasets, and we *still* see ueven distribution of $\Bconf{}$, then this can indicate a problem: it means that the ideal measure we are striving towards (true expected risk) is unable to identify that model used to generate the data. In this case, tweaking the $c$ value is a waste of time: the issue then is with the problem statement rather than the $\Bemd{}$ calibration. Most likely the issue is that the loss is ill-suited to the problem:
+~ If each candidate is used for half the datasets, and we *still* see ueven distribution of $\Bconf{}$, then this can indicate a problem: it means that the ideal measure we are striving towards (true risk) is unable to identify that model used to generate the data. In this case, tweaking the $c$ value is a waste of time: the issue then is with the problem statement rather than the $\Bemd{}$ calibration. Most likely the issue is that the loss is ill-suited to the problem:
   + It might not account for rotation/translation symmetries in images, or time dilation in time-series.
   + One model’s loss might be lower, even on data generated with the other model. This can happen with a log posterior, when one model has more parameters: its higher dimensional prior "dilutes" the likelihood. This may be grounds to reject the more complex model on the basis of preferring simplicity, but it is *not* grounds to *falsify* that model. (Since it may still fit the data equally well.)
 
@@ -2646,7 +2646,7 @@ mixed_ppf = Dict({
 })
 ```
 
-Sample of a set of expected risks ($R$) for each candidate model.
+Sample of a set of risks ($R$) for each candidate model.
 
 ```{code-cell} ipython3
 ---
@@ -2739,7 +2739,7 @@ slideshow:
 tags: [active-ipynb, hide-input]
 ---
 # First line: means of the R f
-# Second line: expected risk computed on the original data
+# Second line: risk computed on the original data
 #Rmeans = hv.Spikes([(Rlst.mean(), 2, a) for a, Rlst in R_samples.items()],
 Rmeans = hv.Spikes([(Qrisk[a](LP_data.get_data()).mean(), 2, a) for a in R_samples.keys()],
                      kdims=dims.R, vdims=["height", "model"], group="back")
@@ -2986,7 +2986,7 @@ slideshow:
   slide_type: ''
 tags: [remove-input]
 ---
-emd.utils.GitSHA()
+emd.utils.GitSHA(packages=["emdcmp", "pyloric-network-simulator"])
 ```
 
 ```{code-cell} ipython3

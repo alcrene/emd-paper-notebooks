@@ -5,7 +5,7 @@ jupytext:
     extension: .md
     format_name: myst
     format_version: 0.13
-    jupytext_version: 1.15.0
+    jupytext_version: 1.16.7
 kernelspec:
   display_name: Python (emd-paper)
   language: python
@@ -544,6 +544,11 @@ viz.save(layout_incr_marginals.cols(1), config.paths.figures/"pedag_qhat-incr-ma
 Drawing curves instead of histograms is not as nice:
 
 ```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+---
 hv.Layout([hv.Overlay([hist.to.curve() for hist in ov.values() if isinstance(hist, (hv.Histogram, hv.Area))])
            for ov in layout_incr_marginals]).opts(
     hv.opts.Layout(fig_inches=3, shared_axes=False),
@@ -551,6 +556,8 @@ hv.Layout([hv.Overlay([hist.to.curve() for hist in ov.values() if isinstance(his
     hv.opts.Curve("Curve.x2", color=colors.poststep),
 ).cols(2)
 ```
+
++++ {"editable": true, "slideshow": {"slide_type": ""}}
 
 ### Illustration of the refinement of a quantile path (self-consistency)
 
@@ -1166,7 +1173,7 @@ editable: true
 slideshow:
   slide_type: ''
 ---
-emd.utils.GitSHA(packages=["emd-falsify"])
+emd.utils.GitSHA(packages=["emdcmp"])
 ```
 
 ```{code-cell} ipython3

@@ -13,7 +13,7 @@
 #     name: emd-paper
 # ---
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""}
 # # Rejection probability is not predicted by loss distribution – Planck vs Rayleigh-Jeans
 #
 # {{ prolog }}
@@ -23,8 +23,6 @@
 
 # %% [markdown]
 # > **NOTE** Within Jupyter Lab, this notebook is best displayed with [`jupyterlab-myst`](https://myst-tools.org/docs/mystjs/quickstart-jupyter-lab-myst).
-#
-# > **NOTE** This notebook is synced with a Python file using [Jupytext](https://jupytext.readthedocs.io/). **That file is required** to run this notebook, and it must be in the current working directory.
 
 # %% editable=true slideshow={"slide_type": ""}
 from collections import namedtuple

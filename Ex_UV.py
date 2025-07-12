@@ -262,7 +262,7 @@ colors
 #
 # For example, with data provided by solving an ODE, the correct way to increase the number of samples is to keep the time step $Δt$ fixed and to increase the integration time. Decreasing $Δt$ would NOT work: altough it results in more samples, they are also more correlated, and thus of “lesser quality”.
 #
-# In contrast, for a static relationship like the radiance of a black body, then we *do* want to keep the same upper and lower bounds but increase the density of points within those bounds. (Extending the bounds then would mean testing a different physical regime.) For static relationships, points can be generated independently, so generating more points within the same interval does increase statistical power.
+# In contrast, for a static relationship like the spectral radiance of a black body, then we *do* want to keep the same upper and lower bounds but increase the density of points within those bounds. (Extending the bounds then would mean testing a different physical regime.) For static relationships, points can be generated independently, so generating more points within the same interval does increase statistical power.
 # :::
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -777,6 +777,27 @@ def plot_data(L, T=data_T, λmin=data_λ_min, λmax=data_λ_max, s=data_noise_s,
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "remove-cell"]
 # viz.save(figcol, config.paths.figures/"uv_example-spectra_col.svg")
+
+# %% [markdown]
+# The likelihood ratio suggests more confidence than seems reasonable to ascribe by eye.
+# Since the ratio is unbounded (it keeps growing with the number of datapoints), this is especially notable when we increase the dataset size.
+# Intuitively, what our eye is doing is assigning some floor to the certainty of the comparison, whereas the likelihood ratio thinks more data is always better.
+#
+# Note also that because of the misspecification (the bias $\mathcal{B}_0$ is greater than 0), the likelihood is actually selecting the _incorrect_ model.
+
+# %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb", "hide-input"]
+# data = Dataset("data", L_small, data_λ_min, data_λ_max, data_noise_s, data_T, data_B0).get_data()
+# loglikelihood_ratio_Lsmall = (Qrisk["Rayleigh-Jeans"](data).sum() - Qrisk["Planck"](data).sum())
+#
+# data = Dataset("data", L_large, data_λ_min, data_λ_max, data_noise_s, data_T, data_B0).get_data()
+# loglikelihood_ratio_Llarge = (Qrisk["Rayleigh-Jeans"](data).sum() - Qrisk["Planck"](data).sum())
+#
+# example_data__log10L_ratio__small = round(loglikelihood_ratio_Lsmall / np.log(10))  # Convert to log base 10
+# example_data__log10L_ratio__large= round(loglikelihood_ratio_Llarge / np.log(10))
+#
+# print("log likelihood ratios, Rayleigh-Jeans / Planck")
+# print(f"   small dataset (L={L_small}): 10{viz.make_num_superscript(example_data__log10L_ratio__small)}")
+# print(f"   large dataset (L={L_large}): 10{viz.make_num_superscript(example_data__log10L_ratio__large)}")
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Standard error of fits
@@ -1300,7 +1321,7 @@ class EpistemicDist(emd.tasks.EpistemicDist):
 #                 QA=candidates.QPlanck, QB=candidates.QRJ)
 # ```
 
-# %% editable=true slideshow={"slide_type": ""} tags=["active-py"] raw_mimetype=""
+# %% editable=true raw_mimetype="" slideshow={"slide_type": ""} tags=["active-py"]
 @dataclass(frozen=True)  # frozen allows dataclass to be hashed
 class EpistemicDistBiasSweep(emdcmp.tasks.EpistemicDist):
     N: int|Literal[np.inf] = np.inf
@@ -2002,6 +2023,9 @@ def panel_param_iterator(L=L_small, purpose="data", progbar=True):
 #                     raw_latex=viz.format_pow2(L_med, 'latex'))
 # glue("L_large", L_large, raw_html=viz.format_pow2(L_large, 'latex'),
 #                         raw_latex=viz.format_pow2(L_large, 'latex'))
+#
+# glue("likeratio_RJ-vs-Planck_small", f"$10^{{{example_data__log10L_ratio__small}}} : 1$", raw_myst=True)
+# glue("likeratio_RJ-vs-Planck_large", f"$10^{{{example_data__log10L_ratio__large}}} : 1$", raw_myst=True)
 #
 # glue("Nfits", Nfits)
 # r = fit_stats[("Rayleigh-Jeans", L_small, "T")]

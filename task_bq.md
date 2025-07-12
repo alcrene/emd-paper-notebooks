@@ -1,75 +1,84 @@
-# %% [markdown]
-# ---
-# math:
-#     '\Bemd' : 'B^{\mathrm{EMD}}_{#1}'
-#     '\Bconf': 'B^{\mathrm{epis}}_{#1}'
-#     '\BQ' : 'B^{Q}_{#1}'
-#     '\nN'   : '\mathcal{N}'
-#     '\Unif' : '\operatorname{Unif}'
-#     '\Mtrue': '\mathcal{M}_{\mathrm{true}}'
-# ---
+---
+math:
+    '\Bemd' : 'B^{\mathrm{EMD}}_{#1}'
+    '\Bconf': 'B^{\mathrm{epis}}_{#1}'
+    '\BQ' : 'B^{Q}_{#1}'
+    '\nN'   : '\mathcal{N}'
+    '\Unif' : '\operatorname{Unif}'
+    '\Mtrue': '\mathcal{M}_{\mathrm{true}}'
+---
 
-# %% [markdown]
-# # Task definition for testing using the $Q$ distribution for model comparison
++++
 
-# %% [markdown]
-# This implements a modified version of the `Calibrate` task packaged with `emdcmp`,
-# where insted of using of EMD distribution, the loss distribution (i.e. the distribution of $Q$) is directly used to estimate the probability via the simple ratio
-#
-# $$
-# \BQ{AB;c_Q} &:= P(Q_A < Q_B + η)\,, \\
-# η &\sim \nN(0, c_Q^2) \,.
-# $$ 
-#
-# :::{note}
-# :class: margin
-#
-# Although with the $\Bemd{}$ we made $c$ proportional to the metric _variance_ (of the quantile process),
-# here $c_Q$ determins the _standard deviation_ of the “fuzzing noise”.
-# :::
-#
-# While simple, there is no reason to expect this rule to work, since $Q$ describes aleatoric uncertainty while we are trying to estimate replication uncertainty.
-# And indeed this is what we find; see [](./Ex_UV_cannot-calibrate-with-Q.ipynb) and [](./Calibrating-with-BQ.ipynb).
+# Task definition for testing using the $Q$ distribution for model comparison
 
-# %%
++++
+
+This implements a modified version of the `Calibrate` task packaged with `emdcmp`,
+where insted of using of EMD distribution, the loss distribution (i.e. the distribution of $Q$) is directly used to estimate the probability via the simple ratio
+
+$$
+\BQ{AB;c_Q} &:= P(Q_A < Q_B + η)\,, \\
+η &\sim \nN(0, c_Q^2) \,.
+$$ 
+
+:::{note}
+:class: margin
+
+Although with the $\Bemd{}$ we made $c$ proportional to the metric _variance_ (of the quantile process),
+here $c_Q$ determins the _standard deviation_ of the “fuzzing noise”.
+:::
+
+While simple, there is no reason to expect this rule to work, since $Q$ describes aleatoric uncertainty while we are trying to estimate replication uncertainty.
+And indeed this is what we find; see [](./Ex_UV_cannot-calibrate-with-Q.ipynb) and [](./Ex_Prinz2004_cannot-calibrate-with-Q.ipynb).
+
+```{code-cell} ipython3
 import logging
 from   typing import List
 from   functools import partial
+```
 
-# %%
+```{code-cell} ipython3
 import multiprocessing as mp
 import time
 import psutil
 from   tqdm.auto import tqdm
+```
 
-# %%
+```{code-cell} ipython3
 import numpy as np
+```
 
-# %%
+```{code-cell} ipython3
 from scityping import Dataclass
 from smttask import RecordedTask, TaskOutput
 from emdcmp.tasks import compute_Bconf as compute_Bepis
+```
 
-# %%
+```{code-cell} ipython3
 from config import config
 from utils import get_rng
+```
 
-# %%
+```{code-cell} ipython3
 logger = logging.getLogger(__name__)
+```
 
-# %%
+```{code-cell} ipython3
 calib_point_dtype = np.dtype([("BQ", float), ("Bepis", bool)])
 CalibrateResult = dict[float, np.ndarray[calib_point_dtype]]
+```
 
-# %%
+```{code-cell} ipython3
 class CalibrateOutput(TaskOutput):
     """Compact format used to store task results to disk.
     Use `task.unpack_result` to convert to a `CalibrateResult` object.
     """
     BQ : List[float]
     Bepis: List[float]
+```
 
-# %%
+```{code-cell} ipython3
 def compute_BQ(ω, c, Ldata, LQ):
     """
     If c is array-like, return an array of values, one for each c.
@@ -94,16 +103,17 @@ def compute_BQ(ω, c, Ldata, LQ):
     # For each value of c, average over the ε draws and the data points.
     return np.mean(ω.QA(ω.candidateA(data)) < ω.QB(ω.candidateB(data)) + ε,
                    axis=(-2,-1))
+```
 
-# %%
+```{code-cell} ipython3
 def compute_BQ_and_Bepis(i_ω, c, Ldata, Linf, LQ):
     i, ω = i_ω
     BQ = compute_BQ(ω, c, Ldata, LQ)
     Bepis = compute_Bepis(ω.data_model, ω.QA, ω.QB, Linf)
     return i, BQ, Bepis
+```
 
-
-# %%
+```{code-cell} ipython3
 @RecordedTask
 class CalibrateBQ:
 
@@ -204,3 +214,4 @@ class CalibrateBQ:
 
         return {c: np.array(calib_curve_data[c], dtype=calib_point_dtype)
                 for c in self.taskinputs.c_list}
+```

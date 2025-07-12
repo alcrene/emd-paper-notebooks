@@ -102,7 +102,7 @@ dims = Dict(
         Bemd = hv.Dimension("Bemd", label=r"$B^{\mathrm{EMD}}$"),
         Bconf = hv.Dimension("Bconf", label=r"$B^{\mathrm{conf}}$"),
         c = hv.Dimension("c", label="$c$"),
-        R = hv.Dimension("R", label="expected risk ($R$)")
+        R = hv.Dimension("R", label="risk ($R$)")
     ),
     bokeh = SimpleNamespace(
         λ  = hv.Dimension("λ", label="wavelength", unit=r"$μm$"),
@@ -119,7 +119,7 @@ dims = Dict(
         Bemd = hv.Dimension("Bemd"),
         Bconf = hv.Dimension("Bconf"),
         c = hv.Dimension("c"),
-        R = hv.Dimension("R", label="expected risk (R)")
+        R = hv.Dimension("R", label="risk (R)")
     )
 )
 
