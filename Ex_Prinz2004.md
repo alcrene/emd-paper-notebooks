@@ -1814,7 +1814,7 @@ N = 512
 
 :::{hint}
 :class: margin
-`Calibrate` will iterate over the data models twice, so it is important that the iterable passed as `data_models` not be consumable.
+`Calibrate` will iterate over its `experiments` argument twice, so it is important that `Ωdct` not be consumable.
 :::
 
 ```{code-cell} ipython3

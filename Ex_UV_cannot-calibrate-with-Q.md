@@ -21,7 +21,7 @@ kernelspec:
 %{{ startpreamble }}
 %{{ endpreamble }}
 
-+++
++++ {"editable": true, "slideshow": {"slide_type": ""}}
 
 > **NOTE** Within Jupyter Lab, this notebook is best displayed with [`jupyterlab-myst`](https://myst-tools.org/docs/mystjs/quickstart-jupyter-lab-myst).
 

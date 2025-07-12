@@ -20,7 +20,7 @@
 # math:
 #     '\mspace': '\hspace{#1}'
 #     '\Bemd' : 'B_{#1}^{\mathrm{EMD}}'
-#     '\Bconf': 'B^{\mathrm{conf}}_{#1}'
+#     '\Bconf': 'B^{\mathrm{epis}}_{#1}'
 #     '\Bspec': '\mathcal{B}'
 #     '\eE'   : '\mathcal{E}'
 #     '\ll'   : '\mathcal{l}'
@@ -1059,6 +1059,7 @@ def get_ppfs(_dataset, _fitted: None|Dict[str, FitResult]=None) -> tuple[Dict[st
 # ## Calibration
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
+# (code_uv_calib-dists)=
 # ### Calibration distributions
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}

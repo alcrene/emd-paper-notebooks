@@ -118,19 +118,23 @@ import viz.emdcmp   # Backported updates to emdcmp.viz
 # ## Execution
 
 # %% [markdown]
-# :::{admonition} How many experiments
+# ::::{admonition} How many experiments
 # :class: hint margin
 #
-# The function `emd.viz.calibration_plot` attempts to collect results into 16 bins, so making $N$ a multiple of 16 works nicely. (With the constraint that no bin can have less than 16 points.)
+# The function `emd.viz.calibration_plot` attempts to collect results into 16 bins,[^with-no-less-than-16-points-per-bin] so making $N$ a multiple of 16 works nicely.
 #
+# :::{dropdown} Numbers that worked well for us
 # For an initial pilot run, we found $N=64$ or $N=128$ to be good numbers. These numbers produce respectively 4 or 8 bins, which is often enough to check that $\Bemd{}$ and $\Bconf{}$ are reasonably distributed and that the epistemic distribution is actually probing the transition from strong to equivocal evidence.
-# A subsequent run with $N \in \{256, 512, 1024\}$ can then refine and smooth the curve.
+# A subsequent run with $N \in \{256, 512, 1024, 2048, 4096\}$ can then refine and smooth the curve.
 # :::
+# ::::
+#
+# [^with-no-less-than-16-points-per-bin]: With the constraint that no bin can have less than 16 points.
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # We only run the experiments on the 6 epistemic distributions used in the main paper.
 
-# %%
+# %% editable=true slideshow={"slide_type": ""}
 #N = 64
 #N = 128
 #N = 512
@@ -320,7 +324,7 @@ fig.opts(hv.opts.Layout(backend="matplotlib", fig_inches=2, sublabel_format=""),
          hv.opts.NdOverlay(legend_position="best")
         )
 
-# %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
+# %% editable=true slideshow={"slide_type": ""}
 calibopts = (
     hv.opts.Overlay(backend="matplotlib",
                     #legend_cols=3,
@@ -336,7 +340,7 @@ calibopts = (
 )
 
 
-# %% jupyter={"source_hidden": true} editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
+# %% editable=true slideshow={"slide_type": ""}
 def format_calib_curves(panels, tasks):
     assert len(panels) == 6
     top_row = panels[:3]
@@ -398,7 +402,7 @@ hm.select(uncertainty="EMD")
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # (code_calibrating-with-BQ_plot)=
 
-# %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
+# %% editable=true slideshow={"slide_type": ""}
 fig = hv.Layout(
     format_calib_curves([calplot.overlayed_scatters.redim(Bemd=hv.Dimension("Bemd", label=r"$B^{\mathrm{EMD}}$"))
                          for calplot in calibs_normal.values()],
@@ -457,5 +461,5 @@ data = [(f"Panel ({lbl})",
         for lbl, task in zip("abcdef", tasks_BQ.values())]
 print(tabulate(data, headers, tablefmt="simple_outline"))
 
-# %% editable=true slideshow={"slide_type": ""} tags=["remove-input"]
+# %% editable=true slideshow={"slide_type": ""}
 emdcmp.utils.GitSHA(packages=["emdcmp", "pyloric-network-simulator"])

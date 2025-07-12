@@ -1,4 +1,20 @@
 ---
+jupytext:
+  formats: md:myst,py:percent
+  text_representation:
+    extension: .md
+    format_name: myst
+    format_version: 0.13
+    jupytext_version: 1.16.7
+kernelspec:
+  display_name: Python (emd-paper)
+  language: python
+  name: emd-paper
+---
+
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
+
+---
 math:
     '\Bemd' : 'B^{\mathrm{EMD}}_{#1}'
     '\Bconf': 'B^{\mathrm{epis}}_{#1}'
@@ -12,25 +28,26 @@ math:
 
 # Task definition for testing using the $Q$ distribution for model comparison
 
+%{{ startpreamble }}
+%{{ endpreamble }}
+
 +++
 
 This implements a modified version of the `Calibrate` task packaged with `emdcmp`,
-where insted of using of EMD distribution, the loss distribution (i.e. the distribution of $Q$) is directly used to estimate the probability via the simple ratio
+where instead of using of EMD distribution, the loss distribution (i.e. the distribution of $Q$) is directly used to estimate the probability via the simple ratio
 
-$$
-\BQ{AB;c_Q} &:= P(Q_A < Q_B + η)\,, \\
-η &\sim \nN(0, c_Q^2) \,.
-$$ 
+$$\BQ{AB;c_Q} &:= P(Q_A < Q_B + η)\,, \\
+η &\sim \nN(0, c_Q^2) \,.$$
 
 :::{note}
 :class: margin
 
-Although with the $\Bemd{}$ we made $c$ proportional to the metric _variance_ (of the quantile process),
-here $c_Q$ determins the _standard deviation_ of the “fuzzing noise”.
+Although with the $\Bemd{}$ we made $c$ proportional to the metric *variance* of the quantile process,
+here $c_Q$ determines the *standard deviation* of the “fuzzing noise”.
 :::
 
 While simple, there is no reason to expect this rule to work, since $Q$ describes aleatoric uncertainty while we are trying to estimate replication uncertainty.
-And indeed this is what we find; see [](./Ex_UV_cannot-calibrate-with-Q.ipynb) and [](./Ex_Prinz2004_cannot-calibrate-with-Q.ipynb).
+And indeed this is what we find; see [](./Effect_of_c_on_calibs.ipynb) and [](./Calibrating-with-BQ.ipynb).
 
 ```{code-cell} ipython3
 import logging
@@ -52,7 +69,7 @@ import numpy as np
 ```{code-cell} ipython3
 from scityping import Dataclass
 from smttask import RecordedTask, TaskOutput
-from emdcmp.tasks import compute_Bconf as compute_Bepis
+from emdcmp.tasks import compute_Bconf as compute_Bepis  # `compute_Bepis` is the name in v1.1.1
 ```
 
 ```{code-cell} ipython3

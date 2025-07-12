@@ -36,6 +36,7 @@ import holoviews as hv
 # %%
 from dataclasses import dataclass
 from typing import Optional, Dict, List, Tuple
+from functools import cached_property
 
 # %% editable=true raw_mimetype="" slideshow={"slide_type": ""} tags=["skip-execution"]
 from emdcmp import config, utils
@@ -71,7 +72,67 @@ class CalibrationPlotElements:
         yield self.prohibited_areas
         yield self.discouraged_areas
 
+    ## Expose certain methods so that contained elements can be operated on as a block
+
+    def select(self, selection_specs=None, **kwargs) -> "CalibrationPlotElements":
+        """
+        Create a new `CalibrationPlotElements` after applying `select` to the calibration curves.
+        This is a convenient way of reducing the set of plotted curves.
+
+        Note
+        ----
+        Other plot elements (the shaded areas) are not cloned, and thus will
+        share options and dimensions with the originals.
+        """
+        return CalibrationPlotElements(
+            calibration_curves = self.calibration_curves.select(selection_specs, **kwargs),
+            prohibited_areas = self.prohibited_areas,
+            discouraged_areas = self.discouraged_areas,
+            bin_idcs = self.bin_idcs,
+            Bemd_hist_data = self.Bemd_hist_data,
+            Bepis_hist_data = self.Bepis_hist_data
+        )
+
+    def clone(self, shared_data=True, link=True) -> "CalibrationPlotElements":
+        """
+        Create a new `CalibrationPlotElements` by cloning all the contained elements.
+        Arguments are passed down to all `.clone()` calls
+
+        Note
+        ----
+        Only `shared_data` and `link` arguments are supported, since other
+        arguments don’t make sense for a batch operation.
+        """
+        return CalibrationPlotElements(
+            calibration_curves = self.calibration_curves.clone(shared_data=shared_data, link=link),
+            prohibited_areas = self.prohibited_areas.clone(shared_data=shared_data, link=link),
+            discouraged_areas = self.discouraged_areas.clone(shared_data=shared_data, link=link),
+            bin_idcs = self.bin_idcs,
+            Bemd_hist_data = self.Bemd_hist_data,
+            Bepis_hist_data = self.Bepis_hist_data
+        )
+
+    def redim(self, **kwargs) -> "CalibrationPlotElements":
+        """
+        Create a new `CalibrationPlotElements` by calling `redim` all the contained elements.
+        """
+        return CalibrationPlotElements(
+            calibration_curves = self.calibration_curves.redim(**kwargs),
+            prohibited_areas = self.prohibited_areas.redim(**kwargs),
+            discouraged_areas = self.discouraged_areas.redim(**kwargs),
+            bin_idcs = self.bin_idcs,
+            Bemd_hist_data = self.Bemd_hist_data,
+            Bepis_hist_data = self.Bepis_hist_data
+        )
+
+
     ## Plotting functions ##
+
+    # NB: Using cached_properties allows to overwrite colours on a per-object basis
+    @cached_property
+    def scatter_palette(self): return config.viz.calibration_curves["color"]
+    @cached_property
+    def curve_palette(self): return config.viz.calibration_curves["color"]
 
     @property
     def opts(self):
@@ -83,7 +144,7 @@ class CalibrationPlotElements:
     @property
     def scatter_opts(self):
         scatter_opts = [hv.opts.Curve(color="#888888"),
-                        hv.opts.Scatter(color=config.viz.calibration_curves["color"])
+                        hv.opts.Scatter(color=self.scatter_palette)
                         ]
         if "matplotlib" in hv.Store.renderers:
             scatter_opts += [hv.opts.Curve(linestyle="dotted", linewidth=1, backend="matplotlib"),
@@ -98,13 +159,13 @@ class CalibrationPlotElements:
             hist_opts.append(
                 hv.opts.Histogram(backend="bokeh",
                     line_color=None, alpha=0.75,
-                    color=config.viz.calibration_curves["color"])
+                    color=self.curve_palette)
                 )
         if "bokeh" in hv.Store.renderers:
             hist_opts.append(
                 hv.opts.Histogram(backend="matplotlib",
                     color="none", edgecolor="none", alpha=0.75,
-                    facecolor=config.viz.calibration_curves["color"])
+                    facecolor=self.curve_palette)
                 )
         return hist_opts
 
@@ -146,7 +207,8 @@ class CalibrationPlotElements:
         """
         scatters = {c: curve.to.scatter() for c, curve in self.calibration_curves.items()}
         return hv.HoloMap({c: self.prohibited_areas * self.discouraged_areas
-                              * self.calibration_curves[c].clone() * scatters[c]
+                              * self.calibration_curves[c].clone().relabel(label="")  # Remove labels on curves so the legend uses scatter
+                              * scatters[c]
                            for c in scatters},
                           kdims=["c"]
                ).opts(*self.opts, *self.scatter_opts)
@@ -158,7 +220,8 @@ class CalibrationPlotElements:
         """
         scatters = {c: curve.to.scatter() for c, curve in self.calibration_curves.items()}
         return (self.prohibited_areas * self.discouraged_areas
-                * hv.Overlay([curve.clone() for curve in self.calibration_curves.values()])
+                * hv.Overlay([curve.clone().relabel(label="")  # Remove labels on lines so the legend uses scatter labels (lines all have the same colour, so a legend of lines is no good)
+                              for curve in self.calibration_curves.values()])
                 * hv.Overlay(list(scatters.values()))
                 ).opts(*self.opts, *self.scatter_opts)
 

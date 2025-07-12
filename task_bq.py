@@ -1,4 +1,19 @@
-# %% [markdown]
+# ---
+# jupyter:
+#   jupytext:
+#     formats: md:myst,py:percent
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.16.7
+#   kernelspec:
+#     display_name: Python (emd-paper)
+#     language: python
+#     name: emd-paper
+# ---
+
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
 # ---
 # math:
 #     '\Bemd' : 'B^{\mathrm{EMD}}_{#1}'
@@ -11,25 +26,26 @@
 
 # %% [markdown]
 # # Task definition for testing using the $Q$ distribution for model comparison
+#
+# %{{ startpreamble }}
+# %{{ endpreamble }}
 
 # %% [markdown]
 # This implements a modified version of the `Calibrate` task packaged with `emdcmp`,
-# where insted of using of EMD distribution, the loss distribution (i.e. the distribution of $Q$) is directly used to estimate the probability via the simple ratio
+# where instead of using of EMD distribution, the loss distribution (i.e. the distribution of $Q$) is directly used to estimate the probability via the simple ratio
 #
-# $$
-# \BQ{AB;c_Q} &:= P(Q_A < Q_B + η)\,, \\
-# η &\sim \nN(0, c_Q^2) \,.
-# $$ 
+# $$\BQ{AB;c_Q} &:= P(Q_A < Q_B + η)\,, \\
+# η &\sim \nN(0, c_Q^2) \,.$$
 #
 # :::{note}
 # :class: margin
 #
-# Although with the $\Bemd{}$ we made $c$ proportional to the metric _variance_ (of the quantile process),
-# here $c_Q$ determins the _standard deviation_ of the “fuzzing noise”.
+# Although with the $\Bemd{}$ we made $c$ proportional to the metric *variance* of the quantile process,
+# here $c_Q$ determines the *standard deviation* of the “fuzzing noise”.
 # :::
 #
 # While simple, there is no reason to expect this rule to work, since $Q$ describes aleatoric uncertainty while we are trying to estimate replication uncertainty.
-# And indeed this is what we find; see [](./Ex_UV_cannot-calibrate-with-Q.ipynb) and [](./Calibrating-with-BQ.ipynb).
+# And indeed this is what we find; see [](./Effect_of_c_on_calibs.ipynb) and [](./Calibrating-with-BQ.ipynb).
 
 # %%
 import logging
@@ -48,7 +64,7 @@ import numpy as np
 # %%
 from scityping import Dataclass
 from smttask import RecordedTask, TaskOutput
-from emdcmp.tasks import compute_Bconf as compute_Bepis
+from emdcmp.tasks import compute_Bconf as compute_Bepis  # `compute_Bepis` is the name in v1.1.1
 
 # %%
 from config import config
@@ -61,6 +77,7 @@ logger = logging.getLogger(__name__)
 calib_point_dtype = np.dtype([("BQ", float), ("Bepis", bool)])
 CalibrateResult = dict[float, np.ndarray[calib_point_dtype]]
 
+
 # %%
 class CalibrateOutput(TaskOutput):
     """Compact format used to store task results to disk.
@@ -68,6 +85,7 @@ class CalibrateOutput(TaskOutput):
     """
     BQ : List[float]
     Bepis: List[float]
+
 
 # %%
 def compute_BQ(ω, c, Ldata, LQ):
@@ -94,6 +112,7 @@ def compute_BQ(ω, c, Ldata, LQ):
     # For each value of c, average over the ε draws and the data points.
     return np.mean(ω.QA(ω.candidateA(data)) < ω.QB(ω.candidateB(data)) + ε,
                    axis=(-2,-1))
+
 
 # %%
 def compute_BQ_and_Bepis(i_ω, c, Ldata, Linf, LQ):
