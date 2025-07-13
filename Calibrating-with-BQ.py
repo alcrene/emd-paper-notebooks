@@ -216,7 +216,7 @@ for Ωkey, Ω in Ωdct.items():
 assert all(task.has_run for task in chain(tasks_normal.values(), tasks_BQ.values()))
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# ### Analysis
+# ### Comparison of $\Bemd{}$ and $\BQ{}$ calibration curves
 
 # %% [markdown]
 # :::{important} The basic principles for calibration
@@ -460,6 +460,46 @@ data = [(f"Panel ({lbl})",
          f"{(Ω:=task.experiments).a} vs {Ω.b}", f"{Ω.τ_dist}", f"{Ω.σi_dist}", f"{Ω.σo_dist}", f"{Ω.ξ_name} noise")
         for lbl, task in zip("abcdef", tasks_BQ.values())]
 print(tabulate(data, headers, tablefmt="simple_outline"))
+
+# %% [markdown]
+# (code_higher-res-prinz-calib)=
+# ## Redraw the calibration curves in the main text
+#
+# Since in the course of this experiment, we redid the original six panel calibration with more experiments, we might as well update the figure in the main text with a higher-resolution one.
+# As we did before, we invert the colour scale and (manually) drop $c=2^{2}$, because the dark colours are less discernible.
+
+# %%
+fig_calib_highres = hv.Layout(
+    format_calib_curves([calplot.overlayed_lines.redim(Bemd=hv.Dimension("Bemd", label=r"$B^{\mathrm{EMD}}$"))
+                         for calplot in calibs_normal.values()],
+                        list(tasks_normal.values()))
+).cols(3).opts(*calibopts,
+               #hv.opts.Overlay(legend_position="left", legend_cols=1),
+               hv.opts.Overlay(show_legend=False),
+               hv.opts.Layout(fig_inches=1.15),
+               hv.opts.Curve(color=hv.Palette("copper", range=(0.3, 1), reverse=True))
+              )
+display(fig_calib_highres)
+
+# %% [markdown]
+# The legend is created separately and assembled with Inkscape.
+
+# %%
+import math
+legend_calib_highres = hv.Overlay([curve.clone().redim.range(Bemd=(0,0.1), Bepis=(0.5,0.55)).relabel(label=f"$c=2^{{{int(round(math.log2(c)))}}}$")
+            for c, curve in zip(c_list, fig_calib_highres.Overlay.I.Curve)]).opts(
+    hv.opts.Overlay(show_legend=True, legend_cols=6,
+                    hooks=[viz.xaxis_off_hook, viz.yaxis_off_hook],
+                    aspect=6)
+)
+legend_calib_highres
+
+# %%
+hv.save(fig_calib_highres, config.paths.figures/"prinz_calibrations_high-res_raw.svg")
+hv.save(legend_calib_highres, config.paths.figures/"prinz_calibrations_high-res_legend_raw.svg")
+
+# %%
+viz.glue("N_high-res", N)
 
 # %% editable=true slideshow={"slide_type": ""}
 emdcmp.utils.GitSHA(packages=["emdcmp", "pyloric-network-simulator"])

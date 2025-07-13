@@ -2562,7 +2562,8 @@ slideshow:
   slide_type: ''
 tags: [active-ipynb, remove-cell]
 ---
-glue("uv_c_chosen", f"${viz.format_pow2(c_chosen, 'latex')}$")
+glue("uv_c_chosen", c_chosen, raw_html=viz.format_pow2(c_chosen, 'latex'), # latex b/c used inside $…$ expression
+                             raw_latex=viz.format_pow2(c_chosen, 'latex'))
 
 glue("data_T", **viz.formatted_quantity(data_T, 0))
 glue("data_noise_s", data_noise_s.m, raw_html=viz.format_pow10(data_noise_s.m, 'latex'), # latex b/c used inside $…$ expression
