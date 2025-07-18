@@ -405,6 +405,95 @@ tags: [remove-cell]
 hv.save(fig, config.paths.figures/"uv_calibration_effect-c_raw.svg")
 ```
 
+(code_comparison-tables_uv)=
+## Compute comparison tables for each $c$ value
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [hide-input]
+---
+import math
+import itertools
+from addict import Dict
+
+import emdcmp
+
+from Ex_UV import synth_ppf, mixed_ppf
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [remove input]
+---
+import holoviews as hv
+hv.extension("matplotlib")
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [remove-cell]
+---
+import multiprocessing as mp
+if __name__ == "__main__":
+    mp.set_start_method("fork")  # Currently only works with "fork", because of weird injection of emd-paper/viz into the sys.path of subprocesses otherwise
+```
+
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+Draw sets of R samples for each value of $c$.
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+---
+c_list = [2**-15, 2**-12, 2**-9, 2**-6, 2**-3, 2**0, 2**3, 2**6]
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+---
+def draw_R_samples(c_a):
+    c, a = c_a
+    return c, a, emdcmp.draw_R_samples(mixed_ppf[a], synth_ppf[a], c=c)
+with mp.Pool(4) as pool:
+    R_samples_flat = pool.map(draw_R_samples,
+                              itertools.product(c_list, synth_ppf.keys()))
+    R_samples = {c: Dict() for c in c_list}
+    for c, a, Rsamp in R_samples_flat:
+        R_samples[c][a] = Rsamp    
+```
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [hide-input]
+---
+hm = hv.HoloMap({int(round(math.log2(c))): hv.Table(emdcmp.utils.compare_matrix(R_samples[c]).reset_index().rename(columns={"index": "models"}))
+                 for c in c_list},
+                kdims=["log2(c)"])
+hm
+```
+
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
+
+## Export notebook variables
+
 ```{code-cell} ipython3
 ---
 editable: true

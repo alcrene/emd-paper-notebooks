@@ -334,6 +334,7 @@ calibopts = (
                     #fig_inches=config.figures.defaults.fig_inches,
                     aspect=1, fontscale=1.3),
     hv.opts.Scatter(backend="matplotlib", s=20),
+    #hv.opts.Scatter(color=hv.Palette("copper", range=(0., 1), reverse=True)),
     hv.opts.Layout(sublabel_format=""),
     hv.opts.Layout(backend="matplotlib", hspace=0.1, vspace=0.05,
                    fig_inches=0.65*config.figures.defaults.fig_inches)
@@ -402,6 +403,18 @@ hm.select(uncertainty="EMD")
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # (code_calibrating-with-BQ_plot)=
 
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
+# Invert the order of curves so that the smaller $c$ are drawn with lighter colours and on top
+
+# %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
+for calplot in calibs_normal.values():
+    data = calplot.calibration_curves.data
+    calplot.calibration_curves.data = {k: data[k] for k in reversed(data.keys())}
+
+for calplot in calibs_BQ.values():
+    data = calplot.calibration_curves.data
+    calplot.calibration_curves.data = {k: data[k] for k in reversed(data.keys())}
+
 # %% editable=true slideshow={"slide_type": ""}
 fig = hv.Layout(
     format_calib_curves([calplot.overlayed_scatters.redim(Bemd=hv.Dimension("Bemd", label=r"$B^{\mathrm{EMD}}$"))
@@ -421,7 +434,7 @@ display(fig)
 #    hooks=[viz.xaxis_off_hook, viz.yaxis_off_hook])
 
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
-hv.save(fig, config.paths.figures/"Bemd_prinz_calib-scatter_6panel.svg")
+hv.save(fig, config.paths.figures/"Bemd_prinz_calib-scatter_6panel_raw.svg")
 
 # %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
 fig = hv.Layout(
@@ -436,12 +449,12 @@ fig = hv.Layout(
 display(fig)
 
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
-hv.save(fig, config.paths.figures/"BQ_prinz_calib-scatter_6panel.svg")
+hv.save(fig, config.paths.figures/"BQ_prinz_calib-scatter_6panel_raw.svg")
 
 # %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
 legend = hv.Overlay(
     [next(iter(plot.Scatter.values())).clone()
-     for (c,), plot in next(iter(calibs_normal.values())).scatters.overlay("c").data.items()])
+     for (c,), plot in next(iter(calibs_normal.values())).scatters.overlay("c", sort=False).data.items()])
 c_values = hv.Table([(c, np.log2(c)) for c in c_list], kdims=["c"], vdims=["log2(c)"])
 (legend + c_values).opts(
     hv.opts.Overlay(fontscale=2), # fig_inches=0.01
@@ -450,7 +463,7 @@ c_values = hv.Table([(c, np.log2(c)) for c in c_list], kdims=["c"], vdims=["log2
 )
 
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
-hv.save(legend, config.paths.figures/"BQ-to-Bemd-comparison_legend.svg")
+hv.save(legend, config.paths.figures/"BQ-to-Bemd-comparison_legend_raw.svg")
 
 # %% editable=true slideshow={"slide_type": ""} tags=["hide-input"]
 # Print panel descriptions
@@ -466,7 +479,7 @@ print(tabulate(data, headers, tablefmt="simple_outline"))
 # ## Redraw the calibration curves in the main text
 #
 # Since in the course of this experiment, we redid the original six panel calibration with more experiments, we might as well update the figure in the main text with a higher-resolution one.
-# As we did before, we invert the colour scale and (manually) drop $c=2^{2}$, because the dark colours are less discernible.
+# The original code is found [here](#code_prinz-calib-main-text).
 
 # %%
 fig_calib_highres = hv.Layout(
@@ -477,7 +490,7 @@ fig_calib_highres = hv.Layout(
                #hv.opts.Overlay(legend_position="left", legend_cols=1),
                hv.opts.Overlay(show_legend=False),
                hv.opts.Layout(fig_inches=1.15),
-               hv.opts.Curve(color=hv.Palette("copper", range=(0.3, 1), reverse=True))
+               hv.opts.Curve(color=hv.Palette("copper", range=(0., 1), reverse=True))
               )
 display(fig_calib_highres)
 
@@ -498,7 +511,77 @@ legend_calib_highres
 hv.save(fig_calib_highres, config.paths.figures/"prinz_calibrations_high-res_raw.svg")
 hv.save(legend_calib_highres, config.paths.figures/"prinz_calibrations_high-res_legend_raw.svg")
 
+# %% [markdown] editable=true slideshow={"slide_type": ""}
+# (code_comparison-tables_prinz)=
+# ## Compute comparison tables for each $c$ value
+
 # %%
+from addict import Dict
+from functools import partial
+import math
+import emdcmp
+
+import utils
+from Ex_Prinz2004 import LP_data, phys_models, AdditiveNoise, fit_gaussian_σ, generate_synth_samples, Q
+
+# %%
+import holoviews as hv
+hv.extension("matplotlib")
+
+# %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
+import multiprocessing as mp
+if __name__ == "__main__":
+    mp.set_start_method("fork")  # Currently only works with "fork", because of weird injection of emd-paper/viz into the sys.path of subprocesses otherwise
+
+# %% [markdown]
+# Recreate the synthetic and mixed PPFs as we do in [the base notebook](./Ex_Prinz2004.ipynb).
+
+# %%
+candidate_models = Dict()
+Qrisk = Dict()
+with mp.Pool(4) as pool:
+    fitted_σs = pool.starmap(fit_gaussian_σ, [(LP_data, phys_models[a], "Gaussian") for a in "ABCD"])
+for a, σ in zip("ABCD", fitted_σs):
+    candidate_models[a] = utils.compose(AdditiveNoise("Gaussian", σ),
+                                        phys_models[a])
+    Qrisk[a] = Q(phys_model=phys_models[a], obs_model="Gaussian", σ=σ)
+
+
+# %%
+def get_synth_ppf(a):
+    return emdcmp.make_empirical_risk_ppf(Qrisk[a](generate_synth_samples(candidate_models[a])))
+def get_mixed_ppf(a):
+    return emdcmp.make_empirical_risk_ppf(Qrisk[a](LP_data.get_data()))
+
+with mp.Pool(4) as pool:
+    synth_ppf = Dict(zip("ABCD", pool.map(get_synth_ppf, "ABCD")))
+    mixed_ppf = Dict(zip("ABCD", pool.map(get_mixed_ppf, "ABCD")))
+
+# %% [markdown] editable=true slideshow={"slide_type": ""}
+# Draw sets of R samples for each value of $c$.
+
+# %%
+c_list = [2**-6, 2**-4, 2**-2, 2**0, 2**2, 2**4]
+
+
+# %% editable=true slideshow={"slide_type": ""}
+def draw_R_samples(a, c):
+    return emdcmp.draw_R_samples(mixed_ppf[a], synth_ppf[a], c=c)
+with mp.Pool(4) as pool:
+    R_samples = {}
+    for c in c_list:
+        R_samples[c] = Dict(zip("ABCD", pool.map(partial(draw_R_samples, c=c), "ABCD")))
+
+# %% editable=true slideshow={"slide_type": ""}
+hm = hv.HoloMap({int(round(math.log2(c))): hv.Table(emdcmp.utils.compare_matrix(R_samples[c]).reset_index().rename(columns={"index": "models"}))
+                 for c in c_list},
+                kdims=["log2(c)"])
+hm
+
+# %% [markdown] editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
+# ## Exported variables
+
+# %% editable=true slideshow={"slide_type": ""} tags=["remove-cell"]
 viz.glue("N_high-res", N)
 
 # %% editable=true slideshow={"slide_type": ""}

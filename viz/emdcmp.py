@@ -178,7 +178,9 @@ class CalibrationPlotElements:
         # It must be applied to the Curves themselves; cloning their containing HoloMap is not sufficient
         return hv.HoloMap({c: self.prohibited_areas * self.discouraged_areas
                               * curve.clone()
-                           for c, curve in self.calibration_curves.items()}
+                           for c, curve in self.calibration_curves.items()},
+                           kdims=["c"],
+                           sort=False  # Keep the same order as calibration_curves, to ensure consistent legends
                ).opts(*self.opts)
 
     @property
@@ -210,7 +212,8 @@ class CalibrationPlotElements:
                               * self.calibration_curves[c].clone().relabel(label="")  # Remove labels on curves so the legend uses scatter
                               * scatters[c]
                            for c in scatters},
-                          kdims=["c"]
+                          kdims=["c"],
+                          sort=False  # Keep the same order as calibration_curves, to ensure consistent legends
                ).opts(*self.opts, *self.scatter_opts)
     @property
     def overlayed_scatters(self) -> hv.Overlay:
