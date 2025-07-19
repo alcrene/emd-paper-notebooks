@@ -2140,7 +2140,7 @@ Calibration curve with shortened domain
 ~ If it is acceptable to change the calibration distribution (or to add one to the test suite), then the most common way to address this is to ensure the distribution produces conditions where $\Bemd{}$ can achieve maximum confidence – for example by having conditions with negligeable observation noise.
 :::
 
-+++
++++ {"editable": true, "slideshow": {"slide_type": ""}}
 
 (code_prinz-calib-main-text)=
 #### Calibration figure: main text
@@ -2237,6 +2237,7 @@ Finalized with Inkscape:
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
+(code_prinz-calib_full-grid)=
 #### Calibration figure: Supplementary
 
 ```{code-cell} ipython3

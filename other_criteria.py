@@ -1,7 +1,7 @@
 # ---
 # jupyter:
 #   jupytext:
-#     formats: ipynb,py:percent
+#     formats: ipynb,py:percent,md:myst
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -32,14 +32,14 @@
 # ---
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# # Common model comparison criteria
+# # Implementations of common model comparison criteria
 #
 # {{ prolog }}
 #
 # %{{ startpreamble }}
 # %{{ endpreamble }}
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""}
 # This file collects definitions for other popular model comparison criteria.
 #
 # Devising a criterion involves casting the model selection problem in a way that can be replaced by a model score; the higher/lower the score, the more favoured a model is. A criterion is then an estimator for that score.
@@ -472,7 +472,7 @@ def DIC(Q, Θ, π, 𝒟):
 # WAIC and PSIS-LOO-CV assume uniformly drawn MCMC samples. We _could_ use an MCMC sampler like *pymc* or *emcee*, but since we already run *dynesty*’s slice sampler to compute the model evidence, this seems wasteful.
 # Instead we subsample the log likelihood values returned by *dynesty* according to their probability, thus emulating what a uniform MCMC sampler would return.
 #
-# For the calculations themselves, we use the implementations [ArviZ.waic](https://python.arviz.org/en/stable/api/generated/arviz.waic.html) or [ArviZ.loo](https://python.arviz.org/en/stable/api/generated/arviz.loo.html). At least for PSIS-LOO-CV, this is the recommendation of that method’s [official implementation repo](PSIS-LOO-CV).
+# For the calculations themselves, we use the implementations [ArviZ.waic](https://python.arviz.org/en/stable/api/generated/arviz.waic.html) or [ArviZ.loo](https://python.arviz.org/en/stable/api/generated/arviz.loo.html). At least for PSIS-LOO-CV, this is the recommendation of that method’s [official implementation repo](https://github.com/avehtari/PSIS).
 #
 # ::::{margin}
 # :::{note}
@@ -481,8 +481,8 @@ def DIC(Q, Θ, π, 𝒟):
 # ::::
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# :::{note} Difference with *dynesty*’s `resample_equal` function
-# :class: dropdown
+# :::{admonition} Difference with *dynesty*’s `resample_equal` function
+# :class: note dropdown
 #
 # *dynesty* provides the `resample_equal` function which also generates an MCMC-like set of uniform samples. The difference is that `resample_equal` samples with replacement to create a new dataset of the same size as the original: so it generates a bigger dataset, but with repeated values.
 # I found that the estimated number of parameters using subsampling was more plausible (1.4 instead of 2.3), which is why I use this approach.
@@ -622,5 +622,3 @@ def BR(𝒟): return Criterion(-R("Planck", 𝒟), -R("Rayleigh-Jeans", 𝒟))
 # %% editable=true slideshow={"slide_type": ""} tags=["remove-input"]
 import emdcmp as emd
 emd.utils.GitSHA()
-
-# %% editable=true slideshow={"slide_type": ""}

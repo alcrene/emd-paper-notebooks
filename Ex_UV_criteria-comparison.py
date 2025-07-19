@@ -32,7 +32,7 @@
 # ---
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# # Comparison with other criteria
+# # Comparison with other criteria – inconclusive data
 #
 # {{ prolog }}
 #
@@ -129,11 +129,11 @@ for 𝒟 in dataset_list:
 # > Model $A$ is $B^C_{AB}$ times more probable than model $B$.
 #
 # where $C$ can be “model evidence”, “relative likelihood”, etc. Thus, if $P(A)$ is the “probability of model $A$ and $P(B)$ the “probability of model $B$, then a criterion corresponds to
-# $$B^C_{AB} = \frac{P(A)}{P(B)} \qquad \leftrightarrow \qquad \log B^C_{AB} = \log P(A) - \log P(B) \,.$$  (eq_conceptual-probability-ratio)
+# $$B^C_{AB} = \frac{P(A)}{P(B)} \qquad \leftrightarrow \qquad \log B^C_{AB} = \log P(A) - \log P(B) \,.$$  (eq_conceptual-probability-ratio_repeat)
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""}
 # :::{margin}
-# `Criterion` class takes two arguments – `lognum` and `logdenom` –  which correspond respectively to $\log P(A)$ and $\log P(B)$ in {eq}`eq_conceptual-probability-ratio`.
+# `Criterion` class takes two arguments – `lognum` and `logdenom` –  which correspond respectively to $\log P(A)$ and $\log P(B)$ in {eq}`eq_conceptual-probability-ratio_repeat`.
 # __Values must be provided in base $e$.__ (I.e. we assume natural logarithms.)
 # A `Criterion` object has two attributes, `ratio` and `logratio`, the latter of which is __in base 10__.
 # :::

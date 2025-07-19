@@ -37,7 +37,7 @@ math:
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
-# Comparison with other criteria
+# Comparison with other criteria – large sample asymptotics
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
@@ -96,7 +96,7 @@ refresh_shelves = True  # If true, recreate shelves from joblib caches. For MDL,
 editable: true
 slideshow:
   slide_type: ''
-tags: [active-ipynb]
+tags: [active-ipynb, remove-cell]
 ---
 # This cell only executed in notebooks
 do_long_computations = False
@@ -108,6 +108,7 @@ refresh_shelves = False
 editable: true
 slideshow:
   slide_type: ''
+tags: [hide-input]
 ---
 import viz  # Local module
 from paul_tol_rainbow import discrete_rainbow_scheme  # Local module
@@ -121,6 +122,12 @@ hv.extension("matplotlib")
 ```
 
 ```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [remove-cell]
+---
 def pow2_formatter(x, pos):
     p = math.log2(x)
     if p.is_integer():
@@ -136,6 +143,12 @@ Use sans-serif for LaTeX axis labels.
 - See https://stackoverflow.com/a/27697390
 
 ```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: [hide-input]
+---
 params = {'text.usetex': False,
           'font.family': 'STIXGeneral',
           'mathtext.fontset': 'stixsans'
@@ -147,7 +160,13 @@ params = {'text.usetex': False,
 mpl.rcParams.update(params)
 ```
 
-Extend the color scheme from `Ex_UV`. Some decent options for candidates, from most to least discriminable. The greater variety of colours in the most discriminable palettes makes them a bit jarring.
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+We need to extend the color scheme from `Ex_UV` to support 4 candidates.
+
+For this we use the discrete scheme proposed by Paul Tol {cite:p}`paultolColorSchemes2021{Fig. 22}`, which supports sequences between 1 and 23 steps. This is implemented by our custom function `discrete_rainbow_scheme`, which is essentially just a table lookup.
+
+Some other decent options for candidates are listed below, from most to least discriminable. The greater variety of colours in the most discriminable palettes makes them a bit jarring.
 
     hv.Palette("TolRainbow", range=(0.1, 1.), reverse=True)
     hv.Palette("Sunset", range=(0., 1.), reverse=True)
@@ -162,8 +181,6 @@ slideshow:
 ---
 @dataclass
 class colors(colors):
-    #candidates : hv.Cycle = hv.Cycle(config.figures.colors["bright"]["cycle"])
-    #candidates = hv.Palette("TolRainbow", range=(0.1, 1.), reverse=True)
     candidates : hv.Cycle = hv.Cycle(values = discrete_rainbow_scheme(4)[::-1])
 ```
 
@@ -176,12 +193,18 @@ slideshow:
 colors
 ```
 
-| Criterion    | Not restricted to nested models | No restriction on noise model | Not restricted to log likelihood risk | Not asymptotic | Allows singular models | Allows Bayesian models | Symmetric | Information-theoretic | Consistent | Robust viz. misspecification | Source of variability |
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+:::{note}
+See {numref}`fig_compare-other-criteria-asymptotics` for a more complete version of this table
+:::
+
+| Criterion    | Not restricted to nested models | No restriction on noise model | Not restricted to log likelihood risk | Not asymptotic | Allows singular models | Allows Bayesian models | Symmetric | Information-theoretic | Consistent | Robust wrt. misspecification | Source of variability |
 |--------------|---------------------------------|-------------------------------|---------------------------------------|---------------|----------------------------|------------|--------------|-----------------------|------------|----------------------|----------------|
 | $\Bemd{}$    | ✔      | ✔ | ✔      | ✔ | ✔ | ✔ | ✔ | ✘ | ✔   | ✔    | Imperfect replications |
 | WAIC         | ✔      | ✔ | ✔      | ✔ | ✔ | ✔ | ✔ | ✘ | ✔   | ✘⁽²⁾ | Posterior              |
 | Bayes factor | ✔      | ✔ | ✘      | ✔ | ✘ | ✔ | ✔ | ✘ | ✔   | ✘⁽²⁾ | Posterior              |
-| MDL          | ✔/✘⁽¹⁾ | ✔ | ✔/✘⁽¹⁾ | ✔ | ✘ | ✔ | ✘ | ✔ | ✔   | ✘⁽³⁾ | ???                    |
+| MDL          | ✔/✘⁽¹⁾ | ✔ | ✔/✘⁽¹⁾ | ✔ | ✘ | ✔ | ✘ | ✔ | ✔   | ✘⁽³⁾ | Uniform dist on event space |
 | (BIC)        | ✔      | ✔ | ✘      | ✘ | ✘ | ✔ | ✔ | ✘ | ✔/✘ | ✘    | Posterior              |
 | DIC          | ✘      | ✘ | ✘      | ✘ | ✘ | ✔ | ✘ | ✔ | ✔   | ✘    | Posterior              |
 | AIC          | ✘      | ✘ | ✘      | ✘ | ✘ | ✘ | ✘ | ✔ | ✘   | ✘    | Perfect replications   |
@@ -200,13 +223,19 @@ For this experiment we want one of the candidates to be the true model. Also, in
 - The use of Poisson noise means that possible values are discretized. Technically there are infinitely many possible values, but their probability quickly vanishes, so we need to consider only a dozen or so.
 - Fixed, exact $λ$ values: for a given dataset size $L$, we always generate data with the abscissa $λ_k = μλ_{\mathrm{min}} + k \frac{λ_{\mathrm{max}} - λ_{\mathrm{min}}}{L-1}$, where $k=0, \dotsc, L-1$.
 
+:::{hint}
+:class: margin
+
+This is implemented as the `EnumerableDataset` class within the [MDL utilities](#code_def-EnumerableDataset).
+:::
+
 This means we can implement enumeration as follows:
 1. For each $λ_k$, determine a set of possible values for $\Bspec_k$. Below we use an interval containing 0.9998% of the probability mass. Each $\Bspec_k$ is a sequential array with equal steps.
 2. A dataset is generated by picking a random value from each $\Bspec_k$: $\{(λ_k, b_k) : b_k \sim \Bspec_k\}$.
    The total number of datasets is therefore $\prod_{k=0}^{L-1} \lvert \Bspec_k \rvert$.
 3. In practice there are still an unfeasibly large number of datasets. Therefore we generate them from most to least likely: the hope is that the integrand in an NML integral (which in this case is a series) should correlate with the true data likelihood, and that we can truncate the series once we have enough dominant terms.
 
-+++
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
     sizes = np.asarray(sizes, dtype=int)
     tot_size = int(np.prod(sizes.astype(float)))  # float prevents overflow; casting to Python int is safe (worst case we get a bigint)
@@ -225,12 +254,8 @@ slideshow:
 𝒟 = mdl_uv.EnumerableDataset(
     "comparison with other criteria",
     L   =100,
-    #λmin=0.1*μm,
     λmin=0.6*μm,
     λmax=2  *μm,
-    #σ   =4e-5 * Bunits,
-    #s   =(2e-2*Bunits)**-1,
-    #s   =4*Bunits**-1,
     s   =16*Bunits**-1,
     T   =data_T)
 ```
@@ -240,6 +265,7 @@ slideshow:
 editable: true
 slideshow:
   slide_type: ''
+tags: [hide-input]
 ---
 #data   = Dataset("", L=4000, λmin=0.1*μm, λmax=2*μm, s=(2e-3*Bunits)**-1, T=3000*K)
 𝒟_mean = replace(𝒟, s=(4e-5*Bunits)**-1)
@@ -286,7 +312,7 @@ It is worth emphasizing that in order to accommodate some criteria, we are posin
 
 Making these choices of regime and data-generating model ensures no method is disadvantaged, but of course in practice a practitioner does not get to choose their data, and should choose their model(s) based on what makes sense for those data, not what simplifies the statistical analysis.
 
-In practice of course we would like to be able to compare models without restriction on their structure or the type of noise, as we did in [Fig. ...] comparing the Planck and Rayleigh-Jeans models with $\Bemd{}$. Bayesian methods are also agnostic to the choice of model. Bayesian methods however consider a different type of epistemic error, and in particular ignore errors due to misspecification. We illustrate this with a comparison table in [Supplementary ...]. For completeness, this table also includes values obtained with the other criteria – since in practice they are often used even when they are invalid.
+In practice of course we would like to be able to compare models without restriction on their structure or the type of noise, as we did in {numref}`fig_uv-example_r-distributions` comparing the Planck and Rayleigh-Jeans models with $\Bemd{}$. Bayesian methods are also agnostic to the choice of model. Bayesian methods however consider a different type of epistemic error, and in particular ignore errors due to misspecification. We illustrate this with a comparison table in {numref}`tbl_uv_criteria-comparison`. For completeness, this table also includes values obtained with the other criteria – since in practice they are often used even when they are invalid.
 
 ```{code-cell} ipython3
 ---
@@ -364,6 +390,7 @@ We use the negative log likelihood as our risk functional, with a Gaussian obser
 editable: true
 slideshow:
   slide_type: ''
+tags: [hide-input]
 ---
 class QMeta(type):
     def __getitem__(cls, Θ):
@@ -395,6 +422,7 @@ Parameters are fitted by minimizing $Q$, subject to some mild regularization on 
 editable: true
 slideshow:
   slide_type: ''
+tags: [hide-input]
 ---
 def _fitΘ(λℬ, physmodel, m):
     log2_T0    = np.log2(data_T.m)
@@ -497,54 +525,52 @@ df_mdl = pd.DataFrame(
     columns=["L", "m", "comp"])
 ```
 
-+++ {"editable": true, "slideshow": {"slide_type": ""}}
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
 ### Test criterion evaluations
 
-+++ {"editable": true, "slideshow": {"slide_type": ""}}
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
 θˆ = fitΘ(𝒟.get_data(), "Planck", m=1)
 𝓜 = CandidateModel("Planck", *θˆ)
 π = π_phys_loose & π_coeffs_loose(m=1)
 
-+++ {"editable": true, "slideshow": {"slide_type": ""}}
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
 R(Q["Planck"], θˆ, 𝒟)
 
-+++
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
 AIC(Q["Planck"], θˆ, 𝒟)
 
-+++
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
 BIC(Q["Planck"], θˆ, 𝒟)
 
-+++
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
 π_coeffs_loose(m=1).rvs()
 
-+++
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
 DIC(Q["Planck"], θˆ, π, 𝒟)
 
-+++
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
 logℰ(Q["Planck"], π, 𝒟)
 
-+++
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
 elpd(Q["Planck"], π, 𝒟, Lᑊ=4)
 
-+++
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
 mixed_ppf, synth_ppf = get_ppfs(𝓜, 𝒟, rng=utils.get_rng("synth ppf - compare - models"))
 draw_R_samples(mixed_ppf, synth_ppf, 0.5)
 
-+++
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
-:::{admonition} TODO
-MDL
-:::
+MDL_criterion(_Q, θˆ, 𝒟, physmodel, m=0)
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
@@ -560,11 +586,6 @@ editable: true
 slideshow:
   slide_type: ''
 ---
-#Llist = (2**4, 2**6, 2**8, 2**10, 2**12)#, 2**14)
-#mlist = range(0, 9)
-#Llist = (2**2, 2**3, 2**4, 2**5, 2**6, 2**8, 2**10, 2**12)
-#mlist = (0, 4, 16, 64)
-#Lᑊ_elpd = 4
 mlist = [0,2,4,6]
 Llist       = [2**6, 2**7, 2**8, 2**9, 2**10, 2**11, 2**12]   # np.logspace(6, 12, 7, base=2)
 Llist_short = [2**6,       2**8,       2**10,        2**12] 
@@ -627,18 +648,14 @@ To show this, we change the seed for each dataset, i.e. for each different $L$.
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
+### Compute MDL criteria
+
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
 :::{note}
-Managing our own cache under `data/*-model-compare` makes it easier to archive results and package them with our code.
+Because the MDL calculations are so onerous, it is worth manually managing our own cache under `data/*-model-compare`
+to ensure we never trigger a run accidentally, or delete an old run accidentally.
 :::
-
-::::{margin}
-:::{hint}
-To get the location of the cache for $R$-distributions, check
-`emdcmp.config.caching.joblib.location`
-
-The code from `other_criteria` caches itself under `.joblib-cache/joblib/other_criteria`
-:::
-::::
 
 ```{code-cell} ipython3
 ---
@@ -692,6 +709,10 @@ if arglist and do_long_computations:
                 shelfkey = f"{phys} - {L} - {m}"
                 shelf[shelfkey] = MDL_scores[phys, m, L] = mdl_score
 ```
+
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+### Compute other criteria
 
 ```{code-cell} ipython3
 ---
@@ -758,6 +779,21 @@ with shelve.open(str(config.paths.data/"criteria-model-compare")) as shelf_score
                 progbar_m.update()
             progbar_L.update()
 ```
+
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+### Compute $R$-distributions
+
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+::::{margin}
+:::{hint}
+To get the location of the cache for $R$-distributions, check
+`emdcmp.config.caching.joblib.location`
+
+The code from `other_criteria` caches itself under `.joblib-cache/joblib/other_criteria`
+:::
+::::
 
 ```{code-cell} ipython3
 ---
@@ -961,6 +997,20 @@ for vdim in ["Δ logE", "Δ elpd"]:
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
+Standard error on $\log \eE$ is negligible:
+
+```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+---
+df["logE_se"].max(None)
+```
+
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+(code_criteria-comparison-grid)=
 ## Criteria comparison grid
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
@@ -1162,11 +1212,16 @@ def plot_Rdists(Rdists: dict,
     return fig
 ```
 
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+### Basic analysis
+
 ```{code-cell} ipython3
 ---
 editable: true
 slideshow:
   slide_type: ''
+tags: [hide-input]
 ---
 _Rdists = {(m, L): Rdist for (phys, m, L), Rdist in Rdists.items() if phys == "Planck"}
 pn.pane.Matplotlib(
@@ -1185,6 +1240,7 @@ This is almost certainly why higher-order polynomials obtain tighter $R$-distrib
 editable: true
 slideshow:
   slide_type: ''
+tags: [hide-input]
 ---
 _Rdists = {(m, L): Rdist for (phys, m, L), Rdist in Rdists.items() if phys == "Rayleigh-Jeans"}
 pn.pane.Matplotlib(
@@ -1198,6 +1254,7 @@ pn.pane.Matplotlib(
 editable: true
 slideshow:
   slide_type: ''
+tags: [hide-input]
 ---
 _Rdists = {(phys, L): Rdist for (phys, m, L), Rdist in Rdists.items() if m == 0}
 pn.pane.Matplotlib(
@@ -1215,6 +1272,7 @@ Planck is favoured by $\Bemd{}$, although the difference is less when we add pol
 editable: true
 slideshow:
   slide_type: ''
+tags: [hide-input]
 ---
 P_index  = pd.MultiIndex.from_tuples([("Planck", m_P) for m_P in mlist], names=["phys model", "m"])
 RJ_index = pd.MultiIndex.from_tuples([("Rayleigh-Jeans", m_P) for m_P in mlist], name=["phys model", "m"])
@@ -1225,11 +1283,17 @@ pd.DataFrame(
 ).style.set_caption(r"$B^{\mathrm{EMD}}$ between Planck & Rayleigh-Jeans models")
 ```
 
++++ {"editable": true, "slideshow": {"slide_type": ""}}
+
+(code_criteria-comparison-grid_fig)=
+### Final comparison grid figure
+
 ```{code-cell} ipython3
 ---
 editable: true
 slideshow:
   slide_type: ''
+tags: [hide-input]
 ---
 w = 30.548
 fig = mpl.figure.Figure(figsize=((6*w + 50, 3*40)*ureg.mm).to("in").m)
@@ -1306,14 +1370,9 @@ pn.pane.Matplotlib(fig, tight=True, width=800)
 editable: true
 slideshow:
   slide_type: ''
+tags: [remove-cell]
 ---
 fig.savefig(config.paths.figures/"compare-other-methods_grid_raw.svg")
-```
-
-Standard error on $\log \eE$ is negligible:
-
-```{code-cell} ipython3
-df["logE_se"].max(None)
 ```
 
 ```{code-cell} ipython3
@@ -1324,13 +1383,4 @@ slideshow:
 tags: [remove-input]
 ---
 emd.utils.GitSHA()
-```
-
-```{code-cell} ipython3
----
-editable: true
-slideshow:
-  slide_type: ''
----
-
 ```

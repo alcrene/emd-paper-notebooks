@@ -117,6 +117,12 @@ $$
 (In the expression, $\displaystyle \sum_{\vec{i}\sim \iI_k}^r$ means to draw $r$ samples $\vec{i}$ from $\iI_k$.)
 
 ```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: []
+---
 import logging
 import sys
 import itertools
@@ -740,6 +746,9 @@ for k in range(16):
 assert math.isclose(index_multiplicity((5,)*300, 1000), index_multiplicity_simple((5,)*300, 1000))
 ```
 
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": []}
+
+(code_def-EnumerableDataset)=
 ## Augment the `Dataset` class with methods to generate and count possible datasets.
 - `value_sets`
 - `value_set_sizes`
@@ -758,6 +767,12 @@ If we decide to add this feature back as an option flag, it would be important t
 :::
 
 ```{code-cell} ipython3
+---
+editable: true
+slideshow:
+  slide_type: ''
+tags: []
+---
 @dataclass(frozen=True)
 class EnumerableDataset(Dataset):
     def value_sets(self, thresh=0.01):

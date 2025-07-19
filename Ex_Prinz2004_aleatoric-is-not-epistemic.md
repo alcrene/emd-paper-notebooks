@@ -1,5 +1,6 @@
 ---
 jupytext:
+  default_lexer: ipython3
   formats: ipynb,md:myst,py:percent
   text_representation:
     extension: .md
@@ -15,7 +16,7 @@ kernelspec:
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
 (code_aleatoric-cannot-substitute-epistemic)=
-# Code: Aleatoric vs Sampling vs Replication uncertainty
+# Aleatoric vs Sampling vs Replication uncertainty
 
 {{ prolog }}
 

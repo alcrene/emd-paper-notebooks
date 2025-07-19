@@ -1460,7 +1460,7 @@ N = 512
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # :::{hint}
 # :class: margin
-# `Calibrate` will iterate over the data models twice, so it is important that the iterable passed as `data_models` not be consumable.
+# `Calibrate` will iterate over its `experiments` argument twice, so it is important that `Ωdct` not be consumable.
 # :::
 
 # %% editable=true slideshow={"slide_type": ""}
@@ -1718,7 +1718,7 @@ def panel_calib_curve(task, c_list: list[float]) -> hv.Overlay:
 # ~ If it is acceptable to change the calibration distribution (or to add one to the test suite), then the most common way to address this is to ensure the distribution produces conditions where $\Bemd{}$ can achieve maximum confidence – for example by having conditions with negligeable observation noise.
 # :::
 
-# %% [markdown]
+# %% [markdown] editable=true slideshow={"slide_type": ""}
 # (code_prinz-calib-main-text)=
 # #### Calibration figure: main text
 
@@ -1791,6 +1791,7 @@ def panel_calib_curve(task, c_list: list[float]) -> hv.Overlay:
 # - Save to PDF
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
+# (code_prinz-calib_full-grid)=
 # #### Calibration figure: Supplementary
 
 # %% editable=true slideshow={"slide_type": ""} tags=["active-ipynb"]
