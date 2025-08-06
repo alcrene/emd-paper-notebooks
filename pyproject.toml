@@ -34,7 +34,7 @@ addict = "*"
 more-itertools = "*"
 joblib = "*"
 "flufl.lock" = "*"         # Used by pyloric-simulator to lock its initialization cache
-pint = "*"
+pint = ">=0.24.4"          # A bug in 0.24.3 prevents importing Pint (frozen dataclass can’t inherit from nonfrozen)
 tabulate = "*"
 
 # For executing notebooks
