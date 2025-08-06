@@ -1,6 +1,11 @@
-# Code notebooks for the EMD falsification paper
+# Code notebooks for the paper _Selecting fitted models under epistemic uncertainty_
 
-This repository contains the Jupyter notebooks used to create the figures for our paper describing model falsification using the EMD (empirical mean discrepancy).
+This repository contains the Jupyter notebooks used to create the figures for our paper describing model selecting using the empirical modelling discrepancy (EMD).
+
+[![Open in Code Ocean](https://codeocean.com/codeocean-assets/badge/open-in-code-ocean.svg)](https://codeocean.com/capsule/0868474/tree/v1)
+[![DOI (code)](https://zenodo.org/badge/15032858.svg)](https://zenodo.org/badge/latestdoi/15032858)
+[![DOI (paper)](https://img.shields.io/badge/DOI_(paper)-10.1038%2Fs41467--025--64658--7-%23EF2F2C)](https://doi.org/10.1038/s41467-025-64658-7)
+
 
 ## Format
 
