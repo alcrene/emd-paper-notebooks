@@ -13,6 +13,13 @@ kernelspec:
   name: emd-paper
 ---
 
+---
+math:
+    '\Bemd' : 'B_{#1}^{\mathrm{EMD}}'
+    '\qproc': '\mathfrak{Q}'
+    '\EMD'  : '\mathrm{EMD}'
+---
+
 +++ {"editable": true, "slideshow": {"slide_type": ""}}
 
 (code_aleatoric-cannot-substitute-epistemic)=
@@ -34,12 +41,6 @@ A bootstrap estimate of the aleatoric uncertainty therefore also contributes to 
 To illustrate this, we compare $R$-distributions with
 - distributions of the loss itself over the dataset;
 - re-samples of the dataset. (What one typically estimates with a bootstrap approach.)
-
-+++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
-
-> **NOTE** Within Jupyter Lab, this notebook is best displayed with [`jupyterlab-myst`](https://myst-tools.org/docs/mystjs/quickstart-jupyter-lab-myst).
-
-> **NOTE** This notebook is synced with a Python file using [Jupytext](https://jupytext.readthedocs.io/). **That file is required** to run this notebook, and it must be in the current working directory.
 
 +++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
 
@@ -178,8 +179,7 @@ LP_data_big = replace(LP_data, L=40_000)  # Reuse the same datasets for each dat
 `memory.cache` will invalidate the cache if _anything_ changes in the function definitions; for example:
 - changing the memory object name from `memory` to `mem`;
 - adding or removing white space;
-- adding or removing comments;
-will invalidate the cache.
+- adding or removing comments.
 :::
 
 ```{code-cell} ipython3
