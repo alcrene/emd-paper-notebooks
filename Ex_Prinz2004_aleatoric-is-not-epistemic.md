@@ -13,6 +13,8 @@ kernelspec:
   name: emd-paper
 ---
 
++++ {"editable": true, "slideshow": {"slide_type": ""}, "tags": ["remove-cell"]}
+
 ---
 math:
     '\Bemd' : 'B_{#1}^{\mathrm{EMD}}'
