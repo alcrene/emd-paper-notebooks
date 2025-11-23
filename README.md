@@ -5,13 +5,35 @@ This repository contains the Jupyter notebooks used to create the figures for ou
 [![Open in Code Ocean](https://codeocean.com/codeocean-assets/badge/open-in-code-ocean.svg)](https://codeocean.com/capsule/0868474/tree/v1)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17293956.svg)](https://doi.org/10.5281/zenodo.17293956)
 [![DOI (paper)](https://img.shields.io/badge/DOI_(paper)-10.1038%2Fs41467--025--64658--7-%23EF2F2C)](https://doi.org/10.1038/s41467-025-64658-7)
+[![arXiv:A2408.13414](https://img.shields.io/badge/stat.ME-arXiv%3A2408.13414-B31B1B?logo=arxiv&logoColor=B31B1B)](https://arxiv.org/abs/2408.13414)
 
+## PyPI package
 
-## Format
+The core model comparison methods illustrated in these notebooks are provided as the PyPI package [`emdcmp`](https://pypi.org/project/emdcmp/).
+If you want to use these methods for your own experiments,
 
-Notebooks are stored in a plain text format using [jupytext](https://jupytext.readthedocs.io/).
+    pip install emdcmp
 
-## Installation
+into your project.
+
+## Stuff you can do immediately in your browser
+
+### Browse the code
+
+The [online version](https://alcrene.github.io/emd-paper) of the paper has a **Notebooks** section, where all of these notebooks are pre-rendered and edited for improved legibility.
+
+### Run the code on Code Ocean
+
+A slightly edited version of these notebooks is available as a [Code Ocean capsule](https://codeocean.com/capsule/0868474/tree/v1).  
+This is a pre-tested environment which runs in the browser, allowing you to run immediately the notebooks and experiment with the `emdcmp` package.
+
+### View additional implementation details
+
+The [documentation for the `emdcmp` package](https://alcrene.github.io/emdcmp) goes into greater detail on the specifics of our implementation than what we could include in the paper.
+
+## Local installation
+
+**Format:** Notebooks are stored in a plain text format using [jupytext](https://jupytext.readthedocs.io/).
 
 * Clone this repo:
 
